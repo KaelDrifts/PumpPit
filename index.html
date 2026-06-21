@@ -24,6 +24,25 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
 const WORLD=4000;
 
+// ── SOLANA CONFIG ─────────────────────────────────────────────────────────────
+const SOLANA_RPC    = 'https://api.mainnet-beta.solana.com'; // swap to devnet for testing
+const PUMP_MINT     = '';          // ← paste your SPL token mint address here
+const PUMP_DECIMALS = 6;
+const POINTS_TO_PUMP= 0.01;       // 100 pts = 1 PUMP
+const COOLDOWN_MS   = 24*60*60*1000; // 24-hour cooldown per wallet
+
+async function rpc(method,params=[]){
+  try{
+    const r=await fetch(SOLANA_RPC,{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({jsonrpc:'2.0',id:1,method,params})});
+    return (await r.json()).result;
+  }catch(e){return null;}
+}
+function getCooldown(addr){const v=localStorage.getItem('pumppit_cd_'+addr);return v?parseInt(v):0;}
+function setCooldown(addr,ms){localStorage.setItem('pumppit_cd_'+addr,Date.now()+ms);}
+function cooldownLeft(addr){return Math.max(0,getCooldown(addr)-Date.now());}
+function fmtTime(ms){const s=Math.ceil(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return h?h+'h '+m+'m':m?m+'m '+ss+'s':ss+'s';}
+
 // ── CHARACTER CUSTOMISATION ───────────────────────────────────────────────────
 const HAIR_OPTS=[
   {n:'Auburn', c:'#7c3a14',l:'#9b4a1a'},
@@ -44,20 +63,62 @@ function hair(){return HAIR_OPTS[CHAR.hairIdx];}
 function armor(){return ARMOR_OPTS[CHAR.armorIdx];}
 
 // ── WALLET ────────────────────────────────────────────────────────────────────
-let WALLET={connected:false,address:null,loading:false};
+let WALLET={
+  connected:false,address:null,loading:false,
+  solBalance:null,pumpBalance:null,balanceTimer:0,
+  claimState:'idle', // idle | loading | success | error
+  claimSig:null,claimError:null,claimAmount:0,
+};
 async function connectWallet(){
   if(WALLET.loading)return;
   if(WALLET.connected){
     try{if(window.solana)await window.solana.disconnect();}catch(e){}
-    WALLET={connected:false,address:null,loading:false};return;
+    WALLET={connected:false,address:null,loading:false,solBalance:null,pumpBalance:null,
+      balanceTimer:0,claimState:'idle',claimSig:null,claimError:null,claimAmount:0};
+    return;
   }
   WALLET.loading=true;
   try{
     if(!window?.solana?.isPhantom){window.open('https://phantom.app/','_blank');WALLET.loading=false;return;}
     const r=await window.solana.connect();
     WALLET.address=r.publicKey.toString();WALLET.connected=true;
+    fetchBalances();
   }catch(e){}
   WALLET.loading=false;
+}
+async function fetchBalances(){
+  if(!WALLET.connected||!WALLET.address)return;
+  WALLET.balanceTimer=5;
+  const solR=await rpc('getBalance',[WALLET.address,{commitment:'confirmed'}]);
+  if(solR)WALLET.solBalance=(solR.value/1e9).toFixed(3);
+  if(PUMP_MINT){
+    const tokR=await rpc('getTokenAccountsByOwner',[WALLET.address,{mint:PUMP_MINT},{encoding:'jsonParsed',commitment:'confirmed'}]);
+    if(tokR&&tokR.value.length>0){
+      WALLET.pumpBalance=parseFloat(tokR.value[0].account.data.parsed.info.tokenAmount.uiAmountString||'0');
+    }else if(tokR){WALLET.pumpBalance=0;}
+  }
+}
+async function claimRewards(){
+  if(WALLET.claimState==='loading')return;
+  if(!WALLET.connected){connectWallet();return;}
+  const cl=cooldownLeft(WALLET.address);if(cl>0){addFloat('Wallet on cooldown!',WORLD/2,WORLD/2,'#ef4444',true);return;}
+  WALLET.claimState='loading';
+  const pump=Math.floor(G.finalScore*POINTS_TO_PUMP*100)/100;
+  WALLET.claimAmount=pump;
+  try{
+    const msg=`PumpPit Claim\nScore: ${G.finalScore}\nEarned: ${pump} PUMP\nWallet: ${WALLET.address}\nTimestamp: ${Date.now()}`;
+    const encoded=new TextEncoder().encode(msg);
+    const{signature}=await window.solana.signMessage(encoded,'utf8');
+    // Convert signature bytes to base58-ish string for display
+    const sigHex=Array.from(signature).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,20);
+    WALLET.claimSig=sigHex+'...';
+    WALLET.claimState='success';
+    setCooldown(WALLET.address,COOLDOWN_MS);
+    fetchBalances();
+  }catch(e){
+    WALLET.claimState='error';
+    WALLET.claimError=(e.message||'User rejected').slice(0,40);
+  }
 }
 
 // ── LEADERBOARD ───────────────────────────────────────────────────────────────
@@ -230,7 +291,7 @@ function initGame(){
     upgradeChoices:[],bossCount:0,bossAnnounce:0,bossName:'',
     damageMulti:1,damageMultTimer:0,screenShake:0,hitFlash:0,
     streak:0,streakTimer:0,waveNum:1,waveAnnounce:0,
-    torches:genTorches(),diffScale:1,nextDiffTime:30,deadAt:0,finalScore:0};
+    torches:genTorches(),diffScale:1,nextDiffTime:30,deadAt:0,finalScore:0,pumpEarned:0};
   G.cam.x=G.player.x-W/2;G.cam.y=G.player.y-H/2;
 }
 
@@ -260,8 +321,11 @@ function damagePlayer(dmg){
 }
 function endGame(){
   const p=G.player;G.finalScore=scoreOf(p,G);G.deadAt=Date.now();
+  G.pumpEarned=Math.round(G.finalScore*POINTS_TO_PUMP*100)/100;
   lbSave({score:G.finalScore,time:Math.floor(G.time),kills:G.kills,bosses:G.bossCount,
+    pump:G.pumpEarned,
     addr:WALLET.connected?WALLET.address.slice(0,4)+'..'+WALLET.address.slice(-4):'Wanderer'});
+  WALLET.claimState='idle';WALLET.claimSig=null;WALLET.claimError=null;
   G.phase='dead';
 }
 
@@ -347,6 +411,9 @@ function spawnAround(id){
 function dropChest(e){if(Math.random()<e.chestChance&&e.chestType)G.chests.push({x:e.x,y:e.y,type:e.chestType,openProgress:0,state:'closed',life:15,pulseT:0});}
 function killEnemy(e){
   G.kills++;G.player.tokens+=e.tok;
+  // Track PUMP earned this run
+  const pumpGain=e.boss?e.tok*5*POINTS_TO_PUMP:e.tok*POINTS_TO_PUMP;
+  G.pumpEarned=Math.round((G.pumpEarned+pumpGain)*100)/100;
   G.streak++;G.streakTimer=4;
   if(G.streak===3)addFloat('3x KILLSTREAK!',e.x,e.y-50,'#f97316',true);
   else if(G.streak===5)addFloat('5x RAMPAGE!!',e.x,e.y-50,'#ef4444',true);
@@ -676,7 +743,9 @@ function drawHUD(){
   const need=xpNeeded(p.level),xf=p.xp/need;ctx.fillStyle='#1a0e06';ctx.fillRect(10,32,220,11);ctx.strokeStyle='#5c3d1e';ctx.lineWidth=1;ctx.strokeRect(10,32,220,11);const xgr=ctx.createLinearGradient(10,0,230,0);xgr.addColorStop(0,'#8b6f00');xgr.addColorStop(1,'#daa520');ctx.fillStyle=xgr;ctx.fillRect(10,32,220*xf,11);
   ctx.fillStyle='#fef3c7';ctx.font='9px monospace';ctx.fillText('LVL '+p.level+'   '+p.xp+' / '+need+' XP',12,41);
   for(let i=0;i<p.shieldMax;i++){ctx.beginPath();ctx.arc(238+i*15,18,5.5,0,Math.PI*2);ctx.fillStyle=i<p.shieldHp?'#38bdf8':'#1a2a3a';ctx.fill();ctx.strokeStyle='#7dd3fc';ctx.lineWidth=1;ctx.stroke();}
-  ctx.textAlign='right';ctx.fillStyle='#cd853f';ctx.font='bold 13px monospace';ctx.fillText(Math.floor(G.time)+'s',W-10,20);ctx.fillStyle='#8b6f47';ctx.fillText(G.kills+' kills',W-10,36);ctx.fillStyle='#daa520';ctx.fillText(p.tokens+' $PUMP',W-10,52);
+  ctx.textAlign='right';ctx.fillStyle='#cd853f';ctx.font='bold 13px monospace';ctx.fillText(Math.floor(G.time)+'s',W-10,20);ctx.fillStyle='#8b6f47';ctx.fillText(G.kills+' kills',W-10,36);
+  // Show PUMP earned this run with Solana green
+  ctx.fillStyle='#14f195';ctx.font='bold 11px monospace';ctx.fillText('+'+G.pumpEarned+' PUMP',W-10,52);
   // Wave counter — top center
   ctx.textAlign='center';ctx.fillStyle='#8b4513';ctx.font='bold 11px monospace';ctx.fillText('WAVE '+G.waveNum,W/2,16);
   ctx.fillStyle='#5c3d1e';ctx.font='9px monospace';ctx.fillText('Score: '+scoreOf(p,G),W/2,32);
@@ -707,6 +776,7 @@ function drawLevelUp(){
 
 // ── DEAD SCREEN ───────────────────────────────────────────────────────────────
 function drawDead(){
+  DEAD_BTNS=[];
   if(tilePat){ctx.save();ctx.globalAlpha=.25;ctx.fillStyle=tilePat;ctx.fillRect(0,0,W,H);ctx.restore();}
   ctx.fillStyle='rgba(10,3,0,.87)';ctx.fillRect(0,0,W,H);
   ctx.strokeStyle='#7c2d12';ctx.lineWidth=4;ctx.strokeRect(12,12,W-24,H-24);ctx.strokeStyle='#daa520';ctx.lineWidth=1;ctx.strokeRect(18,18,W-36,H-36);
@@ -733,12 +803,56 @@ function drawDead(){
   ctx.strokeStyle='#5c4033';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(W/2-180,H/2+72);ctx.lineTo(W/2+180,H/2+72);ctx.stroke();
   // Best score hint
   const lb=lbLoad();if(lb.length>0&&G.finalScore>=lb[0].score){ctx.fillStyle='#fbbf24';ctx.font='bold 12px monospace';ctx.fillText('★ NEW BEST SCORE! ★',W/2,H/2+90);}
-  if(Math.floor(Date.now()/600)%2===0){ctx.shadowBlur=8;ctx.shadowColor='#8b4513';pxText('ENTER / SPACE → MENU',W/2,H/2+112,13,'#cd853f','center');ctx.shadowBlur=0;}
+
+  // ── CLAIM SECTION ──────────────────────────────────────────────────────────
+  const clY=H/2+108;
+  const cdL=WALLET.connected?cooldownLeft(WALLET.address):0;
+  if(WALLET.claimState==='success'){
+    ctx.fillStyle='#14f195';ctx.font='bold 13px monospace';
+    ctx.fillText('✓ Claim signed! '+WALLET.claimAmount+' PUMP verified',W/2,clY);
+    ctx.fillStyle='#8b6f47';ctx.font='10px monospace';
+    ctx.fillText('Sig: '+WALLET.claimSig,W/2,clY+18);
+    ctx.fillStyle='#5c4033';ctx.font='10px monospace';
+    ctx.fillText('On-chain minting active when contract deploys',W/2,clY+34);
+    if(Math.floor(Date.now()/600)%2===0)pxText('ENTER / SPACE → MENU',W/2,clY+56,13,'#cd853f','center');
+  }else if(WALLET.claimState==='loading'){
+    const dots='.'.repeat((Math.floor(Date.now()/300)%4)+1);
+    ctx.fillStyle='#14f195';ctx.font='bold 13px monospace';ctx.fillText('Signing with Phantom'+dots,W/2,clY+12);
+  }else if(WALLET.claimState==='error'){
+    ctx.fillStyle='#ef4444';ctx.font='bold 12px monospace';ctx.fillText('✗ '+WALLET.claimError,W/2,clY);
+    // Retry btn
+    DEAD_BTNS.push({x:W/2-60,y:clY+10,w:120,h:28,action:claimRewards});
+    ctx.fillStyle='rgba(30,5,5,.9)';ctx.fillRect(W/2-60,clY+10,120,28);ctx.strokeStyle='#ef4444';ctx.lineWidth=1;ctx.strokeRect(W/2-60,clY+10,120,28);
+    ctx.fillStyle='#ef4444';ctx.font='bold 11px monospace';ctx.fillText('RETRY',W/2,clY+28);
+    if(Math.floor(Date.now()/600)%2===0)pxText('ENTER / SPACE → MENU',W/2,clY+52,13,'#cd853f','center');
+  }else{
+    // idle — show claim button if wallet connected
+    if(!WALLET.connected){
+      DEAD_BTNS.push({x:W/2-110,y:clY-4,w:220,h:32,action:connectWallet});
+      ctx.shadowBlur=8;ctx.shadowColor='#a78bfa';
+      ctx.fillStyle='rgba(20,5,30,.9)';ctx.fillRect(W/2-110,clY-4,220,32);ctx.strokeStyle='#a78bfa';ctx.lineWidth=1;ctx.strokeRect(W/2-110,clY-4,220,32);
+      ctx.fillStyle='#a78bfa';ctx.font='bold 12px monospace';ctx.fillText('🔮 Connect wallet to claim '+G.pumpEarned+' PUMP',W/2,clY+16);ctx.shadowBlur=0;
+    }else if(cdL>0){
+      ctx.fillStyle='#5c4033';ctx.font='bold 11px monospace';
+      ctx.fillText('⏳ Wallet cooldown: '+fmtTime(cdL),W/2,clY+8);
+      DEAD_BTNS.push({x:W/2-90,y:clY+18,w:180,h:26,action:connectWallet});
+      ctx.fillStyle='rgba(20,8,0,.7)';ctx.fillRect(W/2-90,clY+18,180,26);ctx.strokeStyle='#5c4033';ctx.lineWidth=1;ctx.strokeRect(W/2-90,clY+18,180,26);
+      ctx.fillStyle='#8b4513';ctx.font='bold 10px monospace';ctx.fillText('Play with another wallet',W/2,clY+34);
+    }else{
+      DEAD_BTNS.push({x:W/2-130,y:clY-6,w:260,h:36,action:claimRewards});
+      const cp=.75+Math.sin(Date.now()*.004)*.25;
+      ctx.shadowBlur=16*cp;ctx.shadowColor='#14f195';
+      ctx.fillStyle='rgba(0,20,10,.95)';ctx.fillRect(W/2-130,clY-6,260,36);ctx.strokeStyle=`rgba(20,241,149,${cp})`;ctx.lineWidth=2;ctx.strokeRect(W/2-130,clY-6,260,36);
+      ctx.fillStyle='#14f195';ctx.font='bold 14px monospace';ctx.fillText('◎  CLAIM '+G.pumpEarned+' PUMP ON SOLANA',W/2,clY+16);ctx.shadowBlur=0;
+    }
+    if(WALLET.connected&&cdL===0&&Math.floor(Date.now()/600)%2===0){}
+    else if(Math.floor(Date.now()/600)%2===0)pxText('ENTER / SPACE → MENU',W/2,clY+54,13,'#cd853f','center');
+  }
   ctx.textAlign='left';
 }
 
 // ── MENU / LANDING PAGE ───────────────────────────────────────────────────────
-let MENU_BTNS=[];
+let MENU_BTNS=[],DEAD_BTNS=[];
 let menuWalkCycle=0;
 
 function menuBtn(x,y,w,h,label,color,action){
@@ -791,35 +905,50 @@ function drawMenuPlay(t){
 
   // ── RIGHT: Wallet + Start ───────────────────────────────────────────────────
   const RX=PX+PW/2+10,RW=PW/2-32,RY=PY+20;
-  ctx.fillStyle='#daa520';ctx.font='bold 11px monospace';ctx.fillText('WALLET',RX,RY+12);
-  ctx.strokeStyle='#5c4033';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(RX,RY+17);ctx.lineTo(RX+RW,RY+17);ctx.stroke();
+  ctx.fillStyle='#14f195';ctx.font='bold 11px monospace';ctx.fillText('WALLET',RX,RY+12);
+  ctx.strokeStyle='#14f19540';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(RX,RY+17);ctx.lineTo(RX+RW,RY+17);ctx.stroke();
 
-  // Wallet status
+  // Wallet status block
   if(WALLET.connected){
-    const short=WALLET.address.slice(0,6)+'...'+WALLET.address.slice(-4);
-    ctx.fillStyle='#14f195';ctx.font='bold 11px monospace';ctx.fillText('✓ Connected',RX,RY+40);
-    ctx.fillStyle='#8b6f47';ctx.font='10px monospace';ctx.fillText(short,RX,RY+56);
-    menuBtn(RX,RY+66,RW,30,'Disconnect','#8b4513',()=>connectWallet());
+    const short=WALLET.address.slice(0,4)+'...'+WALLET.address.slice(-4);
+    const cdL=cooldownLeft(WALLET.address);
+    // Green dot + address
+    ctx.fillStyle='#14f195';ctx.beginPath();ctx.arc(RX+5,RY+34,4,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#14f195';ctx.font='bold 11px monospace';ctx.fillText('Connected',RX+14,RY+38);
+    ctx.fillStyle='#8b6f47';ctx.font='10px monospace';ctx.fillText(short,RX,RY+54);
+    // SOL + PUMP balances
+    if(WALLET.solBalance!=null){
+      ctx.fillStyle='#9ca3af';ctx.fillText('◎ '+WALLET.solBalance+' SOL',RX,RY+70);}
+    if(WALLET.pumpBalance!=null){
+      ctx.fillStyle='#14f195';ctx.fillText('⬡ '+(WALLET.pumpBalance).toLocaleString()+' PUMP',RX,RY+84);}
+    else if(!PUMP_MINT){ctx.fillStyle='#5c4033';ctx.font='9px monospace';ctx.fillText('Set PUMP_MINT for balance',RX,RY+84);}
+    if(cdL>0){
+      ctx.fillStyle='#f97316';ctx.font='9px monospace';ctx.fillText('⏳ Cooldown: '+fmtTime(cdL),RX,RY+100);}
+    menuBtn(RX,RY+108,RW,26,'Disconnect','#5c4033',()=>connectWallet());
   }else if(WALLET.loading){
-    ctx.fillStyle='#cd853f';ctx.font='11px monospace';ctx.fillText('Connecting...',RX,RY+44);
+    const dots='.'.repeat((Math.floor(Date.now()/300)%4)+1);
+    ctx.fillStyle='#cd853f';ctx.font='11px monospace';ctx.fillText('Connecting'+dots,RX,RY+44);
   }else{
-    ctx.fillStyle='#8b6f47';ctx.font='10px monospace';ctx.fillText('Connect Phantom to save',RX,RY+36);ctx.fillText('your scores on-chain.',RX,RY+50);
-    menuBtn(RX,RY+60,RW,34,'🔮 Connect Phantom','#a78bfa',()=>connectWallet());
+    ctx.fillStyle='#8b6f47';ctx.font='10px monospace';
+    ctx.fillText('Connect to earn & claim PUMP',RX,RY+34);
+    menuBtn(RX,RY+44,RW,34,'🔮 Connect Phantom','#a78bfa',()=>connectWallet());
   }
 
   // Leaderboard teaser
   const lb=lbLoad();
+  ctx.fillStyle='#5c4033';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(RX,RY+148);ctx.lineTo(RX+RW,RY+148);ctx.stroke();
   if(lb.length>0){
-    ctx.fillStyle='#5c4033';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(RX,RY+112);ctx.lineTo(RX+RW,RY+112);ctx.stroke();
-    ctx.fillStyle='#8b6f47';ctx.font='bold 10px monospace';ctx.fillText('BEST SCORE',RX,RY+126);
-    ctx.fillStyle='#daa520';ctx.font='bold 12px monospace';ctx.fillText('#1  '+lb[0].score+' pts  ('+lb[0].time+'s)',RX,RY+142);
-    ctx.fillStyle='#8b6f47';ctx.font='10px monospace';ctx.fillText(lb[0].addr||'Wanderer',RX,RY+158);
-  }
+    ctx.fillStyle='#8b6f47';ctx.font='bold 10px monospace';ctx.fillText('BEST RUN',RX,RY+162);
+    ctx.fillStyle='#daa520';ctx.font='bold 11px monospace';ctx.fillText('#1  '+lb[0].score+' pts',RX,RY+176);
+    ctx.fillStyle='#14f195';ctx.font='10px monospace';ctx.fillText((lb[0].pump||0)+' PUMP  ('+lb[0].time+'s)',RX,RY+190);
+    ctx.fillStyle='#8b6f47';ctx.fillText(lb[0].addr||'Wanderer',RX,RY+204);
+  }else{ctx.fillStyle='#5c4033';ctx.font='10px monospace';ctx.fillText('No runs yet',RX,RY+166);}
 
-  // Weapon preview icons
-  ctx.fillStyle='#5c4033';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(RX,RY+175);ctx.lineTo(RX+RW,RY+175);ctx.stroke();
-  ctx.fillStyle='#8b6f47';ctx.font='bold 10px monospace';ctx.fillText('START WITH',RX,RY+190);
-  ctx.font='18px sans-serif';ctx.fillText('🔫  Auto-fires!',RX,RY+210);
+  // pump.fun link button
+  ctx.fillStyle='#5c4033';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(RX,RY+220);ctx.lineTo(RX+RW,RY+220);ctx.stroke();
+  MENU_BTNS.push({x:RX,y:RY+228,w:RW,h:24,action:()=>window.open('https://pump.fun','_blank')});
+  ctx.fillStyle='rgba(10,20,10,.8)';ctx.fillRect(RX,RY+228,RW,24);ctx.strokeStyle='#14f19540';ctx.lineWidth=1;ctx.strokeRect(RX,RY+228,RW,24);
+  ctx.fillStyle='#14f195';ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText('◎ Buy $PUMP on pump.fun',RX+RW/2,RY+244);ctx.textAlign='left';
 
   // START button (big)
   // START button with pulse glow
@@ -887,6 +1016,15 @@ function drawMenu(t){
 
   if(G.menuTab==='play')drawMenuPlay(t);
   else drawMenuScores();
+
+  // ── pump.fun / Solana footer ─────────────────────────────────────────────
+  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,H-28,W,28);
+  ctx.fillStyle='#14f195';ctx.font='bold 10px monospace';ctx.textAlign='center';
+  ctx.fillText('◎ Powered by Solana Mainnet',W/2-60,H-10);
+  ctx.fillStyle='#5c4033';ctx.fillText('|',W/2+74,H-10);
+  MENU_BTNS.push({x:W/2+80,y:H-28,w:120,h:28,action:()=>window.open('https://pump.fun','_blank')});
+  ctx.fillStyle='#8b6f47';ctx.fillText('pump.fun',W/2+120,H-10);
+  ctx.textAlign='left';
 }
 
 // ── MAIN LOOP ─────────────────────────────────────────────────────────────────
@@ -894,6 +1032,11 @@ let last=0,menuT=0;
 function loop(ts){
   const dt=Math.min((ts-last)/1000,.05);last=ts;
   ctx.clearRect(0,0,W,H);
+  // Balance refresh every 5s while connected
+  if(WALLET.connected){
+    WALLET.balanceTimer-=dt;
+    if(WALLET.balanceTimer<=0)fetchBalances();
+  }
   if(G.phase==='menu'){menuT+=dt;drawMenu(menuT);}
   else if(G.phase==='dead')drawDead();
   else{if(G.phase==='playing')update(dt);draw();if(G.phase==='levelup')drawLevelUp();}
@@ -910,7 +1053,7 @@ c.addEventListener('click',e=>{
   const rect=c.getBoundingClientRect();
   const mx=(e.clientX-rect.left)*(W/rect.width),my=(e.clientY-rect.top)*(H/rect.height);
   if(G.phase==='menu'){for(const btn of MENU_BTNS){if(mx>=btn.x&&mx<=btn.x+btn.w&&my>=btn.y&&my<=btn.y+btn.h){btn.action();break;}}return;}
-  if(G.phase==='dead')return;
+  if(G.phase==='dead'){for(const btn of DEAD_BTNS){if(mx>=btn.x&&mx<=btn.x+btn.w&&my>=btn.y&&my<=btn.y+btn.h){btn.action();break;}}return;}
   if(G.phase==='levelup'){
     const chs=G.upgradeChoices,cw2=Math.min(190,(W-60)/chs.length),tot=chs.length*(cw2+14)-14,sx2=W/2-tot/2,cy=H/2-90;
     for(let i=0;i<chs.length;i++){const ccx=sx2+i*(cw2+14);if(mx>=ccx&&mx<=ccx+cw2&&my>=cy&&my<=cy+180){applyUpgrade(chs[i]);break;}}
