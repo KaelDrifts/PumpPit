@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>⚔️ Dungeon Crawler — $PUMP Token Farming</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a14; color: #e2e8f0; font-family: 'Segoe UI', system-ui, sans-serif; }
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: #1e293b; }
+  ::-webkit-scrollbar-thumb { background: #475569; border-radius: 2px; }
+  button:hover:not(:disabled) { filter: brightness(1.15); transform: translateY(-1px); }
+  button:active:not(:disabled) { transform: translateY(0); }
+  button { transition: all 0.15s ease; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-4px)} 75%{transform:translateX(4px)} }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .shake { animation: shake 0.3s ease; }
+  .pulse { animation: pulse 1s infinite; }
+  .fadeIn { animation: fadeIn 0.3s ease; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
+
+// ═══════════════════════════════════════════════════════════════
+// GAME DATA
+// ═══════════════════════════════════════════════════════════════
+
+const ZONES = [
+  { id:1, name:'🌲 Whispering Forest',  color:'#16a34a', bgGrad:'#0d1f0b', enemies:['rat','goblin','wolf'],    encPer:5 },
+  { id:2, name:'🏚️ Dark Dungeon',       color:'#a16207', bgGrad:'#1f1a0b', enemies:['skeleton','orc','zombie'], encPer:5 },
+  { id:3, name:'🌋 Burning Cavern',     color:'#dc2626', bgGrad:'#1f0808', enemies:['troll','demon','golem'],   encPer:5 },
+  { id:4, name:'🏔️ Dragon\'s Lair',    color:'#2563eb', bgGrad:'#08080f', enemies:['wyvern','lich','dragon'],  encPer:5 },
+  { id:5, name:'👁️ Void Realm',        color:'#7c3aed', bgGrad:'#0f0814', enemies:['shadow','phantom','elder'],encPer:5 },
+];
+
+const ENEMIES = {
+  rat:     { name:'🐀 Giant Rat',      hp:12,  atk:3,  def:0,  tokens:3,   gold:2,   tier:1, xp:5   },
+  goblin:  { name:'👺 Goblin',         hp:20,  atk:5,  def:1,  tokens:5,   gold:5,   tier:1, xp:8   },
+  wolf:    { name:'🐺 Dire Wolf',      hp:28,  atk:8,  def:2,  tokens:8,   gold:7,   tier:1, xp:12  },
+  skeleton:{ name:'💀 Skeleton',       hp:35,  atk:10, def:3,  tokens:15,  gold:12,  tier:2, xp:20  },
+  orc:     { name:'👹 Orc Warrior',    hp:50,  atk:13, def:4,  tokens:20,  gold:18,  tier:2, xp:28  },
+  zombie:  { name:'🧟 Zombie',         hp:45,  atk:11, def:5,  tokens:18,  gold:15,  tier:2, xp:25  },
+  troll:   { name:'🧌 Cave Troll',     hp:80,  atk:18, def:7,  tokens:40,  gold:35,  tier:3, xp:50  },
+  demon:   { name:'😈 Fire Demon',     hp:70,  atk:22, def:6,  tokens:50,  gold:40,  tier:3, xp:60  },
+  golem:   { name:'🗿 Stone Golem',    hp:100, atk:15, def:12, tokens:45,  gold:38,  tier:3, xp:55  },
+  wyvern:  { name:'🐉 Wyvern',         hp:120, atk:28, def:10, tokens:80,  gold:70,  tier:4, xp:90  },
+  lich:    { name:'☠️ Lich',           hp:110, atk:32, def:8,  tokens:100, gold:85,  tier:4, xp:110 },
+  dragon:  { name:'🔥 Ancient Dragon', hp:200, atk:35, def:15, tokens:150, gold:130, tier:4, xp:180 },
+  shadow:  { name:'🌑 Shadow Beast',   hp:150, atk:40, def:12, tokens:200, gold:170, tier:5, xp:220 },
+  phantom: { name:'👻 Void Phantom',   hp:140, atk:45, def:10, tokens:250, gold:200, tier:5, xp:260 },
+  elder:   { name:'🌀 Elder God',      hp:250, atk:50, def:20, tokens:500, gold:400, tier:5, xp:400 },
+};
+
+const WEAPONS = [
+  { id:'fists',   name:'👊 Bare Fists',     atk:0,  price:0   },
+  { id:'dagger',  name:'🗡️ Rusty Dagger',   atk:5,  price:30  },
+  { id:'sword',   name:'⚔️ Iron Sword',     atk:12, price:80  },
+  { id:'axe',     name:'🪓 Battle Axe',     atk:18, price:150 },
+  { id:'staff',   name:'🪄 Magic Staff',    atk:25, price:250 },
+  { id:'scythe',  name:'💀 Death Scythe',   atk:40, price:500 },
+];
+
+const ARMOR = [
+  { id:'rags',    name:'🩱 Tattered Rags',  def:0,  price:0   },
+  { id:'leather', name:'🥻 Leather Armor',  def:5,  price:40  },
+  { id:'chain',   name:'⛓️ Chain Mail',     def:12, price:100 },
+  { id:'plate',   name:'🛡️ Plate Armor',    def:20, price:200 },
+  { id:'dragonS', name:'🐲 Dragon Scales',  def:35, price:400 },
+];
+
+const LOOT_BY_ZONE = {
+  1:{ weapons:['dagger'],          armor:['leather'],          chance:0.30 },
+  2:{ weapons:['dagger','sword'],  armor:['leather','chain'],  chance:0.35 },
+  3:{ weapons:['sword','axe'],     armor:['chain','plate'],    chance:0.40 },
+  4:{ weapons:['axe','staff'],     armor:['plate','dragonS'],  chance:0.45 },
+  5:{ weapons:['staff','scythe'],  armor:['dragonS'],          chance:0.50 },
+};
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+
+const rand    = (min,max) => Math.floor(Math.random()*(max-min+1))+min;
+const pick    = arr => arr[rand(0,arr.length-1)];
+const clamp   = (v,lo,hi) => Math.min(Math.max(v,lo),hi);
+const pAtk    = p => p.baseAtk + (p.weapon?.atk||0);
+const pDef    = p => p.baseDef + (p.armor?.def||0);
+const dmg     = (atk,def) => Math.max(1, atk - def + rand(-2,4));
+const tokMult = asc => 1 + asc * 0.2;
+const xpForLvl= lvl => lvl * 80;
+
+const SAVE_KEY = 'dungeonCrawlerV2';
+const loadSave = () => { try { const d=localStorage.getItem(SAVE_KEY); return d?JSON.parse(d):null; } catch{return null;} };
+const savePers = data => { try { localStorage.setItem(SAVE_KEY,JSON.stringify(data)); } catch{} };
+
+const mkPlayer = (asc=0) => {
+  const am=1+asc*0.10, dm=1+asc*0.10;
+  return {
+    maxHp:100, hp:100,
+    baseAtk:Math.floor(10*am), baseDef:Math.floor(5*dm),
+    weapon:WEAPONS[0], armor:ARMOR[0],
+    potions:3, gold:0, tokens:0, kills:0,
+    zone:1, encounter:0,
+    xp:0, level:1,
+  };
+};
+
+// ═══════════════════════════════════════════════════════════════
+// SUB-COMPONENTS
+// ═══════════════════════════════════════════════════════════════
+
+function HealthBar({cur,max,label,thick=false}){
+  const pct=clamp((cur/max)*100,0,100);
+  const col=pct>60?'#22c55e':pct>30?'#f59e0b':'#ef4444';
+  return(
+    <div style={{marginBottom:6}}>
+      {label&&<div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'#94a3b8',marginBottom:2}}>
+        <span>{label}</span><span>{cur}/{max}</span>
+      </div>}
+      <div style={{background:'#0f172a',borderRadius:4,height:thick?18:12,overflow:'hidden',border:'1px solid #1e293b'}}>
+        <div style={{height:'100%',width:`${pct}%`,background:col,transition:'width 0.4s ease',borderRadius:4,
+          boxShadow:`0 0 8px ${col}88`}}/>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({label,val,icon,col='#60a5fa'}){
+  return(
+    <div style={{background:'#1e293b',border:`1px solid ${col}33`,borderRadius:8,padding:'6px 8px',textAlign:'center',flex:1,minWidth:0}}>
+      <div style={{fontSize:16}}>{icon}</div>
+      <div style={{fontSize:15,fontWeight:'bold',color:col,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{val}</div>
+      <div style={{fontSize:9,color:'#64748b',letterSpacing:1}}>{label}</div>
+    </div>
+  );
+}
+
+function CombatLog({logs}){
+  const ref=useRef(null);
+  useEffect(()=>{ if(ref.current) ref.current.scrollTop=ref.current.scrollHeight; },[logs]);
+  const col=t=>({
+    'p-atk':'#60a5fa','e-atk':'#f87171','heal':'#4ade80','loot':'#fbbf24',
+    'token':'#c084fc','sys':'#94a3b8','crit':'#f97316','lvl':'#facc15','asc':'#a78bfa'
+  }[t]||'#e2e8f0');
+  return(
+    <div ref={ref} style={{background:'#0f172a',border:'1px solid #1e293b',borderRadius:8,
+      height:148,overflowY:'auto',padding:'8px 10px',fontSize:12,fontFamily:'monospace',
+      display:'flex',flexDirection:'column',gap:2}}>
+      {logs.length===0&&<div style={{color:'#334155',fontStyle:'italic'}}>No events yet…</div>}
+      {logs.map((l,i)=>(
+        <div key={i} style={{color:col(l.t),lineHeight:1.4}}>{l.tx}</div>
+      ))}
+    </div>
+  );
+}
+
+function Btn({onClick,disabled,color='#3b82f6',children,style={}}){
+  return(
+    <button onClick={onClick} disabled={disabled} style={{
+      background:disabled?'#1e293b':color, color:disabled?'#475569':'#fff',
+      border:`1px solid ${disabled?'#334155':color+'88'}`,
+      borderRadius:8,padding:'10px 14px',cursor:disabled?'not-allowed':'pointer',
+      fontWeight:'bold',fontSize:13,flex:1,opacity:disabled?0.5:1,...style
+    }}>{children}</button>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MAIN GAME
+// ═══════════════════════════════════════════════════════════════
+
+function DungeonCrawler(){
+  // --- Persistent ---
+  const [asc,setAsc]         = useState(0);
+  const [bestTok,setBestTok] = useState(0);
+  const [board,setBoard]     = useState([]);
+
+  // --- Run ---
+  const [player,setPlayer]   = useState(()=>mkPlayer(0));
+  const [enemy,setEnemy]     = useState(null);
+  const [phase,setPhase]     = useState('explore'); // explore|combat|loot|shop|dead
+  const [logs,setLogs]       = useState([{tx:'⚔️ Your adventure begins! Search for enemies.',t:'sys'}]);
+  const [busy,setBusy]       = useState(false);
+  const [loot,setLoot]       = useState(null);
+  const [streak,setStreak]   = useState(0);  // kills without taking damage
+  const [shake,setShake]     = useState('');  // 'player'|'enemy'|''
+  const [floats,setFloats]   = useState([]);  // [{id,text,col}]
+
+  const floatId = useRef(0);
+
+  // load save
+  useEffect(()=>{
+    const s=loadSave();
+    if(s){
+      setAsc(s.asc||0); setBestTok(s.bestTok||0); setBoard(s.board||[]);
+      setPlayer(mkPlayer(s.asc||0));
+    }
+  },[]);
+
+  // auto-save
+  useEffect(()=>{ savePers({asc,bestTok,board}); },[asc,bestTok,board]);
+
+  const addLog = useCallback((tx,t='sys')=>{
+    setLogs(prev=>[...prev.slice(-60),{tx,t}]);
+  },[]);
+
+  const addFloat = useCallback((text,col='#f97316')=>{
+    const id=++floatId.current;
+    setFloats(prev=>[...prev,{id,text,col}]);
+    setTimeout(()=>setFloats(prev=>prev.filter(f=>f.id!==id)),1200);
+  },[]);
+
+  const zone = useMemo(()=>ZONES[Math.min(player.zone-1,ZONES.length-1)],[player.zone]);
+
+  // ── Spawn enemy ──────────────────────────────────────────────
+  const spawnEnemy = useCallback(()=>{
+    const z=ZONES[Math.min(player.zone-1,ZONES.length-1)];
+    const key=pick(z.enemies);
+    const base=ENEMIES[key];
+    const scale=1+(player.zone-1)*0.18+(player.encounter)*0.06;
+    const e={
+      ...base, key,
+      hp:   Math.floor(base.hp*scale),
+      maxHp:Math.floor(base.hp*scale),
+      atk:  Math.floor(base.atk*scale),
+      def:  Math.floor(base.def*scale),
+    };
+    setEnemy(e);
+    addLog(`⚠️ ${e.name} appears! [Zone ${player.zone} | HP:${e.hp} ATK:${e.atk} DEF:${e.def}]`,'sys');
+    setPhase('combat');
+  },[player.zone,player.encounter,addLog]);
+
+  // ── Attack ───────────────────────────────────────────────────
+  const handleAttack = useCallback(()=>{
+    if(phase!=='combat'||busy||!enemy) return;
+    setBusy(true);
+
+    const isCrit=Math.random()<0.15;
+    let pdmg=dmg(pAtk(player),enemy.def);
+    if(isCrit) pdmg=Math.floor(pdmg*1.8);
+    const newEHp=enemy.hp-pdmg;
+
+    setShake('enemy');
+    setTimeout(()=>setShake(''),320);
+
+    if(isCrit){
+      addLog(`💥 CRIT! You smash ${enemy.name} for ${pdmg}!`,'crit');
+      addFloat(`💥 ${pdmg}!`,'#f97316');
+    } else {
+      addLog(`⚔️ You deal ${pdmg} to ${enemy.name}.`,'p-atk');
+      addFloat(`-${pdmg}`,'#60a5fa');
+    }
+
+    if(newEHp<=0){
+      // ── Enemy killed ─────────────────────────────────────────
+      const tm=tokMult(asc);
+      const ndb=streak>=3?2.0:streak>=1?1.5:1.0;
+      const earnT=Math.floor(enemy.tokens*tm*ndb);
+      const earnG=enemy.gold;
+      const earnXp=enemy.xp;
+
+      addLog(`💀 ${enemy.name} slain!`,'sys');
+      addLog(`🪙 +${earnT} $PUMP${ndb>1?` (x${ndb} no-dmg!)`:''} | 💰 +${earnG}g`,'token');
+      addFloat(`🪙 +${earnT}`,'#c084fc');
+
+      setStreak(s=>s+1);
+
+      setPlayer(prev=>{
+        const newTok=prev.tokens+earnT;
+        const newGold=prev.gold+earnG;
+        const newKills=prev.kills+1;
+        const newXp=prev.xp+earnXp;
+        const newLvl=1+Math.floor(newXp/80);
+        if(newLvl>prev.level){
+          addLog(`⭐ LEVEL UP! Now level ${newLvl}! (+2 ATK, +1 DEF)`,'lvl');
+          addFloat(`⭐ LVL UP!`,'#facc15');
+        }
+        const newEnc=prev.encounter+1;
+        let newZone=prev.zone;
+        if(newEnc>=zone.encPer){
+          newZone=Math.min(prev.zone+1,ZONES.length);
+          const zn=ZONES[Math.min(newZone-1,ZONES.length-1)];
+          addLog(`🗺️ Advancing to ${zn.name}!`,'sys');
+        }
+        return{
+          ...prev,
+          tokens:newTok, gold:newGold, kills:newKills,
+          xp:newXp, level:newLvl,
+          baseAtk:Math.floor((10*(1+asc*0.10))*(1+(newLvl-1)*0.04)),
+          baseDef:Math.floor((5*(1+asc*0.10))*(1+(newLvl-1)*0.03)),
+          encounter: newEnc>=zone.encPer?0:newEnc,
+          zone:newZone,
+        };
+      });
+
+      // Loot check
+      const lz=LOOT_BY_ZONE[Math.min(player.zone,5)];
+      let lootItem=null;
+      if(Math.random()<lz.chance){
+        const isW=Math.random()<0.5;
+        const pool=isW?lz.weapons:lz.armor;
+        const itemId=pick(pool);
+        const item=isW?WEAPONS.find(w=>w.id===itemId):ARMOR.find(a=>a.id===itemId);
+        if(item){ lootItem={...item,isWeapon:isW}; addLog(`✨ Loot dropped: ${item.name}!`,'loot'); }
+      }
+
+      setEnemy(null);
+      setLoot(lootItem);
+
+      const kills=player.kills+1; // approximate for shop trigger
+      if(kills%5===0){
+        setTimeout(()=>{ setPhase('shop'); setBusy(false); },400);
+      } else {
+        setTimeout(()=>{ setPhase(lootItem?'loot':'explore'); setBusy(false); },400);
+      }
+
+    } else {
+      // ── Enemy counter-attacks ─────────────────────────────────
+      setEnemy(e=>({...e,hp:newEHp}));
+
+      setTimeout(()=>{
+        const edm=dmg(enemy.atk,pDef(player));
+        const newPHp=player.hp-edm;
+
+        setShake('player');
+        setTimeout(()=>setShake(''),320);
+        addLog(`🩸 ${enemy.name} hits you for ${edm}!`,'e-atk');
+        addFloat(`-${edm}`,'#f87171');
+        setStreak(0);
+
+        if(newPHp<=0){
+          addLog(`💔 You were slain by ${enemy.name}! Run over.`,'sys');
+          addLog(`📊 ${player.tokens} $PUMP | ${player.kills} kills | Zone ${player.zone}`,'sys');
+          setPlayer(p=>({...p,hp:0}));
+          // save to leaderboard
+          setBestTok(prev=>{
+            const t=player.tokens;
+            if(t>prev){ addLog(`🏆 New best: ${t} tokens!`,'lvl'); return t; }
+            return prev;
+          });
+          setBoard(prev=>{
+            const e2={tokens:player.tokens,kills:player.kills,zone:player.zone,date:new Date().toLocaleDateString()};
+            return [...prev,e2].sort((a,b)=>b.tokens-a.tokens).slice(0,5);
+          });
+          setTimeout(()=>{ setPhase('dead'); setBusy(false); },600);
+        } else {
+          setPlayer(p=>({...p,hp:newPHp}));
+          setBusy(false);
+        }
+      },300);
+    }
+  },[phase,busy,enemy,player,asc,streak,zone,addLog,addFloat]);
+
+  // ── Potion ───────────────────────────────────────────────────
+  const handlePotion = useCallback(()=>{
+    if(player.potions<=0||busy) return;
+    const heal=Math.min(30,player.maxHp-player.hp);
+    if(heal===0){ addLog('❤️ Already at full HP!','sys'); return; }
+    setPlayer(p=>({...p,hp:p.hp+heal,potions:p.potions-1}));
+    addLog(`🧪 Potion: restored ${heal} HP!`,'heal');
+    addFloat(`+${heal} HP`,'#4ade80');
+  },[player.potions,player.hp,player.maxHp,busy,addLog,addFloat]);
+
+  // ── Run away ─────────────────────────────────────────────────
+  const handleRun = useCallback(()=>{
+    if(phase!=='combat'||busy||!enemy) return;
+    if(Math.random()<0.45){
+      addLog('🏃 You flee successfully!','sys');
+      setStreak(0);
+      setEnemy(null);
+      setPhase('explore');
+    } else {
+      const edm=dmg(enemy.atk,pDef(player));
+      const newHp=player.hp-edm;
+      addLog(`❌ Failed to flee! ${enemy.name} hits for ${edm}!`,'e-atk');
+      addFloat(`-${edm}`,'#f87171');
+      setStreak(0);
+      if(newHp<=0){
+        addLog('💔 You died fleeing!','sys');
+        setPlayer(p=>({...p,hp:0}));
+        setPhase('dead');
+      } else {
+        setPlayer(p=>({...p,hp:newHp}));
+      }
+    }
+  },[phase,busy,enemy,player,addLog,addFloat]);
+
+  // ── Handle loot ──────────────────────────────────────────────
+  const handleLoot = useCallback((take)=>{
+    if(!loot){ setPhase('explore'); return; }
+    if(take){
+      const better=loot.isWeapon?loot.atk>(player.weapon?.atk||0):loot.def>(player.armor?.def||0);
+      if(better){
+        addLog(`✅ Equipped ${loot.name}!`,'loot');
+        if(loot.isWeapon) setPlayer(p=>({...p,weapon:loot}));
+        else              setPlayer(p=>({...p,armor:loot}));
+      } else {
+        const sv=Math.max(5,Math.floor((loot.price||10)*0.3));
+        addLog(`💰 Sold ${loot.name} for ${sv}g (weaker than current).`,'loot');
+        setPlayer(p=>({...p,gold:p.gold+sv}));
+      }
+    } else {
+      addLog(`🗑️ Discarded ${loot.name}.`,'sys');
+    }
+    setLoot(null);
+    setPhase('explore');
+  },[loot,player,addLog]);
+
+  // ── Shop buy ─────────────────────────────────────────────────
+  const handleBuy = useCallback((item,isW)=>{
+    if(player.gold<item.price){ addLog('❌ Not enough gold!','sys'); return; }
+    setPlayer(p=>({...p,gold:p.gold-item.price,...(isW?{weapon:item}:{armor:item})}));
+    addLog(`🛒 Bought ${item.name}!`,'loot');
+    addFloat(`${item.name}!`,'#fbbf24');
+  },[player.gold,addLog,addFloat]);
+
+  const handleBuyPotion = useCallback(()=>{
+    if(player.gold<20){ addLog('❌ Not enough gold!','sys'); return; }
+    setPlayer(p=>({...p,gold:p.gold-20,potions:p.potions+1}));
+    addLog('🧪 Bought a Potion!','heal');
+  },[player.gold,addLog]);
+
+  // ── Ascend ───────────────────────────────────────────────────
+  const handleAscend = useCallback(()=>{
+    if(player.zone<3){ addLog('❌ Must reach Zone 3 to Ascend!','sys'); return; }
+    const na=asc+1;
+    const ft=player.tokens;
+    setBestTok(prev=>Math.max(prev,ft));
+    setBoard(prev=>{
+      const e2={tokens:ft,kills:player.kills,zone:player.zone,date:new Date().toLocaleDateString(),asc:true};
+      return [...prev,e2].sort((a,b)=>b.tokens-a.tokens).slice(0,5);
+    });
+    setAsc(na);
+    setPlayer(mkPlayer(na));
+    setStreak(0); setEnemy(null); setLoot(null);
+    setPhase('explore');
+    setLogs([{tx:`✨ ASCENSION ${na}! +${na*10}% ATK/DEF | +${na*20}% $PUMP. Adventure anew!`,t:'asc'}]);
+  },[asc,player,addLog]);
+
+  // ── New run ──────────────────────────────────────────────────
+  const handleNewRun = useCallback(()=>{
+    setPlayer(mkPlayer(asc));
+    setStreak(0); setEnemy(null); setLoot(null);
+    setPhase('explore');
+    setLogs([{tx:'⚔️ A new run begins! Good luck.',t:'sys'}]);
+  },[asc]);
+
+  // ── Derived ──────────────────────────────────────────────────
+  const canAscend=player.zone>=3;
+  const xpNeeded=xpForLvl(player.level);
+  const xpPct=Math.min((player.xp%80)/80*100,100);
+
+  // ═══════════════════════════════════════════════════════════════
+  // RENDER
+  // ═══════════════════════════════════════════════════════════════
+
+  return(
+    <div style={{minHeight:'100vh',background:'#080814',color:'#e2e8f0',
+      fontFamily:'"Segoe UI",system-ui,sans-serif',
+      display:'flex',justifyContent:'center',padding:'16px 10px 40px',position:'relative'}}>
+
+      {/* Float labels */}
+      <div style={{position:'fixed',top:0,left:0,right:0,bottom:0,pointerEvents:'none',zIndex:999}}>
+        {floats.map(f=>(
+          <div key={f.id} style={{
+            position:'absolute',top:'38%',left:'50%',
+            transform:'translateX(-50%)',
+            color:f.col,fontWeight:'bold',fontSize:22,
+            textShadow:`0 0 10px ${f.col}`,
+            animation:'fadeUp 1.2s ease-out forwards',
+            pointerEvents:'none',
+          }}>{f.text}</div>
+        ))}
+      </div>
+
+      <div style={{width:'100%',maxWidth:480}}>
+
+        {/* ── HEADER ─────────────────────────────────────────── */}
+        <div style={{textAlign:'center',marginBottom:10}}>
+          <h1 style={{fontSize:24,fontWeight:900,color:'#c084fc',letterSpacing:2,
+            textShadow:'0 0 20px #c084fc88'}}>
+            ⚔️ DUNGEON CRAWLER
+          </h1>
+          <div style={{fontSize:11,color:'#475569'}}>$PUMP Token Farming Roguelike</div>
+        </div>
+
+        {/* ── ASCENSION BANNER ───────────────────────────────── */}
+        {asc>0&&(
+          <div style={{background:'linear-gradient(135deg,#4c1d95,#2e1065)',
+            border:'1px solid #7c3aed',borderRadius:8,padding:'6px 12px',
+            textAlign:'center',marginBottom:8,fontSize:12,color:'#ddd6fe'}}>
+            ✨ Ascension {asc} &nbsp;|&nbsp; +{asc*10}% ATK/DEF &nbsp;|&nbsp; +{asc*20}% Tokens
+          </div>
+        )}
+
+        {/* ── ZONE BAR ───────────────────────────────────────── */}
+        <div style={{background:'#1e293b',borderRadius:8,padding:'7px 12px',
+          marginBottom:8,display:'flex',justifyContent:'space-between',alignItems:'center',
+          borderLeft:`3px solid ${zone.color}`}}>
+          <span style={{fontWeight:'bold',color:zone.color,fontSize:14}}>{zone.name}</span>
+          <span style={{color:'#64748b',fontSize:11}}>Zone {player.zone} • {player.encounter}/{zone.encPer}</span>
+        </div>
+
+        {/* ── MAIN STATS ─────────────────────────────────────── */}
+        <div style={{display:'flex',gap:5,marginBottom:5}}>
+          <StatCard label="HP"     val={`${player.hp}/${player.maxHp}`} icon="❤️"  col="#ef4444"/>
+          <StatCard label="ATK"    val={pAtk(player)}                   icon="⚔️"  col="#f97316"/>
+          <StatCard label="DEF"    val={pDef(player)}                   icon="🛡️"  col="#3b82f6"/>
+          <StatCard label="$PUMP"  val={player.tokens}                  icon="🪙"  col="#c084fc"/>
+        </div>
+        <div style={{display:'flex',gap:5,marginBottom:8}}>
+          <StatCard label="LVL"    val={player.level}     icon="⭐" col="#facc15"/>
+          <StatCard label="GOLD"   val={player.gold}      icon="💰" col="#a16207"/>
+          <StatCard label="POTION" val={player.potions}   icon="🧪" col="#4ade80"/>
+          <StatCard label="KILLS"  val={player.kills}     icon="💀" col="#f87171"/>
+        </div>
+
+        {/* XP Bar */}
+        <div style={{marginBottom:8}}>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'#64748b',marginBottom:2}}>
+            <span>XP · Level {player.level}</span>
+            <span>{player.xp%80}/{80} to next</span>
+          </div>
+          <div style={{background:'#0f172a',borderRadius:4,height:6,overflow:'hidden'}}>
+            <div style={{height:'100%',width:`${xpPct}%`,background:'#facc15',
+              transition:'width 0.4s',borderRadius:4}}/>
+          </div>
+        </div>
+
+        {/* Streak */}
+        {streak>0&&(
+          <div style={{background:'#1c1004',border:'1px solid #92400e',borderRadius:8,
+            padding:'5px 12px',textAlign:'center',marginBottom:8,fontSize:12,color:'#fbbf24'}}>
+            🔥 No-Damage Streak: {streak} kills!
+            {streak>=3?' → 2× Token Bonus!':streak>=1?' → 1.5× Token Bonus!':''}
+          </div>
+        )}
+
+        {/* ── COMBAT ─────────────────────────────────────────── */}
+        {phase==='combat'&&enemy&&(
+          <div className="fadeIn" style={{background:'#1e293b',
+            border:'1px solid #ef444444',borderRadius:10,padding:12,marginBottom:8}}>
+            <div className={shake==='enemy'?'shake':''} style={{textAlign:'center',marginBottom:8}}>
+              <div style={{fontSize:32,marginBottom:2}}>{enemy.name.split(' ').slice(0,1)}</div>
+              <div style={{fontSize:15,fontWeight:'bold'}}>{enemy.name}</div>
+              <div style={{fontSize:11,color:'#64748b',marginTop:2}}>
+                ATK:{enemy.atk} | DEF:{enemy.def} | Tier {enemy.tier}
+              </div>
+            </div>
+            <HealthBar cur={enemy.hp} max={enemy.maxHp} label="Enemy HP" thick/>
+            <div style={{margin:'8px 0'}}/>
+            <div className={shake==='player'?'shake':''}>
+              <HealthBar cur={player.hp} max={player.maxHp} label="Your HP" thick/>
+            </div>
+            <div style={{display:'flex',gap:6,marginTop:10}}>
+              <Btn onClick={handleAttack} disabled={busy} color="#dc2626">⚔️ Attack</Btn>
+              <Btn onClick={handlePotion} disabled={player.potions<=0||busy} color="#16a34a">
+                🧪 Potion ({player.potions})
+              </Btn>
+              <Btn onClick={handleRun} disabled={busy} color="#78350f">🏃 Run</Btn>
+            </div>
+          </div>
+        )}
+
+        {/* ── EXPLORE ────────────────────────────────────────── */}
+        {phase==='explore'&&(
+          <div className="fadeIn" style={{background:'#1e293b',
+            border:'1px solid #33415566',borderRadius:10,padding:16,
+            marginBottom:8,textAlign:'center'}}>
+            <div style={{fontSize:36,marginBottom:8}}>🗺️</div>
+            <div style={{color:'#94a3b8',fontSize:14,marginBottom:12}}>
+              You venture through {zone.name}…
+            </div>
+            <div style={{display:'flex',gap:8,flexWrap:'wrap',justifyContent:'center'}}>
+              <Btn onClick={spawnEnemy} color="#7c3aed" style={{maxWidth:200}}>
+                ⚔️ Search for Enemy
+              </Btn>
+              {canAscend&&(
+                <Btn onClick={handleAscend} color="#d97706" style={{maxWidth:200}}>
+                  ✨ Ascend! (Zone {player.zone}→)
+                </Btn>
+              )}
+            </div>
+            {canAscend&&(
+              <div style={{fontSize:11,color:'#a16207',marginTop:8}}>
+                You've reached Zone 3! Ascend to earn permanent multipliers.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── LOOT ───────────────────────────────────────────── */}
+        {phase==='loot'&&loot&&(
+          <div className="fadeIn" style={{background:'#1e293b',
+            border:'1px solid #fbbf2455',borderRadius:10,padding:14,
+            marginBottom:8,textAlign:'center'}}>
+            <div style={{fontSize:22,marginBottom:4}}>✨ LOOT DROP</div>
+            <div style={{fontSize:20,marginBottom:4}}>{loot.name}</div>
+            <div style={{fontSize:12,color:'#94a3b8',marginBottom:12}}>
+              {loot.isWeapon?`+${loot.atk} ATK`:`+${loot.def} DEF`}
+              {loot.isWeapon&&loot.atk>(player.weapon?.atk||0)
+                ?<span style={{color:'#4ade80'}}> ✅ Upgrade!</span>
+                :loot.isWeapon?<span style={{color:'#f87171'}}> ❌ Weaker than current</span>:null}
+              {!loot.isWeapon&&loot.def>(player.armor?.def||0)
+                ?<span style={{color:'#4ade80'}}> ✅ Upgrade!</span>
+                :!loot.isWeapon?<span style={{color:'#f87171'}}> ❌ Weaker than current</span>:null}
+            </div>
+            <div style={{display:'flex',gap:8}}>
+              <Btn onClick={()=>handleLoot(true)} color="#ca8a04">
+                {(loot.isWeapon?loot.atk>(player.weapon?.atk||0):loot.def>(player.armor?.def||0))
+                  ?'✅ Equip Item':`💰 Sell (${Math.max(5,Math.floor((loot.price||10)*0.3))}g)`}
+              </Btn>
+              <Btn onClick={()=>handleLoot(false)} color="#475569">🗑️ Discard</Btn>
+            </div>
+          </div>
+        )}
+
+        {/* ── SHOP ───────────────────────────────────────────── */}
+        {phase==='shop'&&(
+          <div className="fadeIn" style={{background:'#1e293b',
+            border:'1px solid #22c55e44',borderRadius:10,padding:12,marginBottom:8}}>
+            <div style={{fontSize:18,textAlign:'center',marginBottom:6}}>🛒 Wandering Merchant</div>
+            <div style={{textAlign:'center',fontSize:12,color:'#fbbf24',marginBottom:10}}>
+              💰 Gold: {player.gold}
+            </div>
+
+            <div style={{fontSize:11,color:'#64748b',marginBottom:4,letterSpacing:1}}>⚔️ WEAPONS</div>
+            {WEAPONS.filter(w=>w.id!=='fists').map(w=>(
+              <div key={w.id} style={{display:'flex',justifyContent:'space-between',
+                alignItems:'center',marginBottom:4,background:'#0f172a',
+                borderRadius:6,padding:'5px 8px'}}>
+                <div>
+                  <span style={{fontSize:12}}>{w.name}</span>
+                  <span style={{fontSize:10,color:'#64748b',marginLeft:6}}>+{w.atk} ATK</span>
+                  {player.weapon?.id===w.id&&<span style={{fontSize:10,color:'#4ade80',marginLeft:4}}>✓</span>}
+                </div>
+                <button onClick={()=>handleBuy(w,true)}
+                  disabled={player.gold<w.price||player.weapon?.id===w.id}
+                  style={{background:player.weapon?.id===w.id?'#065f46':player.gold<w.price?'#1e293b':'#1d4ed8',
+                    color:player.gold<w.price?'#475569':'#fff',border:'none',borderRadius:5,
+                    padding:'3px 8px',cursor:player.gold<w.price?'not-allowed':'pointer',fontSize:11,
+                    opacity:player.gold<w.price?0.5:1}}>
+                  {player.weapon?.id===w.id?'Equip'd':`${w.price}g`}
+                </button>
+              </div>
+            ))}
+
+            <div style={{fontSize:11,color:'#64748b',margin:'8px 0 4px',letterSpacing:1}}>🛡️ ARMOR</div>
+            {ARMOR.filter(a=>a.id!=='rags').map(a=>(
+              <div key={a.id} style={{display:'flex',justifyContent:'space-between',
+                alignItems:'center',marginBottom:4,background:'#0f172a',
+                borderRadius:6,padding:'5px 8px'}}>
+                <div>
+                  <span style={{fontSize:12}}>{a.name}</span>
+                  <span style={{fontSize:10,color:'#64748b',marginLeft:6}}>+{a.def} DEF</span>
+                  {player.armor?.id===a.id&&<span style={{fontSize:10,color:'#4ade80',marginLeft:4}}>✓</span>}
+                </div>
+                <button onClick={()=>handleBuy(a,false)}
+                  disabled={player.gold<a.price||player.armor?.id===a.id}
+                  style={{background:player.armor?.id===a.id?'#065f46':player.gold<a.price?'#1e293b':'#065f46',
+                    color:player.gold<a.price?'#475569':'#fff',border:'none',borderRadius:5,
+                    padding:'3px 8px',cursor:player.gold<a.price?'not-allowed':'pointer',fontSize:11,
+                    opacity:player.gold<a.price?0.5:1}}>
+                  {player.armor?.id===a.id?'Equip'd':`${a.price}g`}
+                </button>
+              </div>
+            ))}
+
+            <div style={{borderTop:'1px solid #1e293b',margin:'8px 0 6px'}}/>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',
+              background:'#0f172a',borderRadius:6,padding:'5px 8px',marginBottom:8}}>
+              <span style={{fontSize:12}}>🧪 Health Potion (+30 HP)</span>
+              <button onClick={handleBuyPotion} disabled={player.gold<20}
+                style={{background:player.gold<20?'#1e293b':'#16a34a',color:player.gold<20?'#475569':'#fff',
+                  border:'none',borderRadius:5,padding:'3px 8px',
+                  cursor:player.gold<20?'not-allowed':'pointer',fontSize:11,
+                  opacity:player.gold<20?0.5:1}}>
+                20g
+              </button>
+            </div>
+
+            <Btn onClick={()=>setPhase('explore')} color="#475569">🚪 Leave Shop</Btn>
+          </div>
+        )}
+
+        {/* ── DEAD ───────────────────────────────────────────── */}
+        {phase==='dead'&&(
+          <div className="fadeIn" style={{background:'#1e293b',
+            border:'1px solid #ef444466',borderRadius:10,
+            padding:16,marginBottom:8,textAlign:'center'}}>
+            <div style={{fontSize:48,marginBottom:6}}>💀</div>
+            <div style={{fontSize:22,color:'#ef4444',fontWeight:'bold',marginBottom:4}}>YOU DIED</div>
+            <div style={{color:'#64748b',fontSize:13,marginBottom:4}}>
+              Zone {player.zone} · {player.kills} kills · {player.tokens} $PUMP
+            </div>
+            {bestTok>0&&(
+              <div style={{color:'#fbbf24',fontSize:12,marginBottom:10}}>
+                🏆 Personal Best: {bestTok} tokens
+              </div>
+            )}
+            <div style={{display:'flex',gap:8}}>
+              <Btn onClick={handleNewRun} color="#7c3aed">🔄 New Run</Btn>
+              {player.zone>=3&&(
+                <Btn onClick={handleAscend} color="#d97706">✨ Ascend First</Btn>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── COMBAT LOG ─────────────────────────────────────── */}
+        <CombatLog logs={logs}/>
+
+        {/* ── EQUIPMENT ──────────────────────────────────────── */}
+        <div style={{background:'#1e293b',borderRadius:8,padding:'8px 12px',
+          marginTop:8,display:'flex',gap:8,borderTop:'2px solid #334155'}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:9,color:'#475569',letterSpacing:1,marginBottom:2}}>WEAPON</div>
+            <div style={{fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+              {player.weapon?.name||'👊 Bare Fists'}
+            </div>
+            <div style={{fontSize:10,color:'#64748b'}}>+{pAtk(player)} total ATK</div>
+          </div>
+          <div style={{width:1,background:'#334155'}}/>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{fontSize:9,color:'#475569',letterSpacing:1,marginBottom:2}}>ARMOR</div>
+            <div style={{fontSize:12,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+              {player.armor?.name||'🩱 Tattered Rags'}
+            </div>
+            <div style={{fontSize:10,color:'#64748b'}}>+{pDef(player)} total DEF</div>
+          </div>
+        </div>
+
+        {/* ── LEADERBOARD ────────────────────────────────────── */}
+        {board.length>0&&(
+          <div style={{background:'#1e293b',borderRadius:8,padding:'10px 12px',marginTop:8}}>
+            <div style={{fontSize:13,color:'#fbbf24',fontWeight:'bold',marginBottom:6}}>
+              🏆 Run History
+            </div>
+            {board.map((e,i)=>(
+              <div key={i} style={{display:'flex',justifyContent:'space-between',
+                fontSize:11,color:'#94a3b8',marginBottom:3,
+                borderBottom:i<board.length-1?'1px solid #0f172a':'none',paddingBottom:3}}>
+                <span>
+                  {['🥇','🥈','🥉','4️⃣','5️⃣'][i]||'•'} Zone {e.zone}
+                  {e.asc?' ✨':''} · {e.kills} kills · {e.date}
+                </span>
+                <span style={{color:'#c084fc',fontWeight:'bold'}}>{e.tokens} $PUMP</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── ASCENSION INFO ─────────────────────────────────── */}
+        <div style={{background:'#1e293b',borderRadius:8,padding:'8px 12px',marginTop:8,
+          border:'1px solid #4c1d9544'}}>
+          <div style={{fontSize:11,color:'#7c3aed',fontWeight:'bold',marginBottom:4}}>
+            ✨ Ascension System (Level {asc})
+          </div>
+          <div style={{fontSize:11,color:'#64748b',lineHeight:1.6}}>
+            Reach Zone 3 and Ascend to permanently gain:<br/>
+            • +10% ATK &amp; DEF per ascension<br/>
+            • +20% $PUMP token earnings per ascension<br/>
+            • Current multipliers: x{(1+asc*0.1).toFixed(1)} ATK/DEF · x{(1+asc*0.2).toFixed(1)} tokens
+          </div>
+        </div>
+
+      </div>
+
+      <style>{`
+        @keyframes fadeUp {
+          0%   { opacity:1; transform:translate(-50%,0); }
+          100% { opacity:0; transform:translate(-50%,-60px); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<DungeonCrawler/>);
+</script>
+</body>
+</html>
