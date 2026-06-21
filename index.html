@@ -409,7 +409,7 @@ function render(){
       '<div style="font-size:22px;margin-bottom:4px">✨ LOOT DROP</div>'+
       '<div style="font-size:20px;margin-bottom:4px">'+l.name+'</div>'+
       '<div style="font-size:12px;color:#94a3b8;margin-bottom:12px">'+(l.isWeapon?'+'+l.atk+' ATK':'+'+l.def+' DEF')+
-      '<span style="color:'+(better?'#4ade80':'#f87171')+'">'+(better?' ✅ Upgrade!',' ❌ Weaker than current')+'</span></div>'+
+      '<span style="color:'+(better?'#4ade80':'#f87171')+'">'+(better?' ✅ Upgrade!':' ❌ Weaker than current')+'</span></div>'+
       '<div class="row">'+mkBtn(better?'✅ Equip Item':'💰 Sell ('+sv+'g)',function(){doLoot(true);},'btn-yellow')+
       mkBtn('🗑️ Discard',function(){doLoot(false);},'btn-gray')+'</div></div>';
   }
