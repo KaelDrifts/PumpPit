@@ -867,7 +867,7 @@ function wrapDraw(text,cx,y,maxW){const words=text.split(' ');let line='';ctx.fo
 // ── START / DEAD ──────────────────────────────────────────────────────────────
 function drawStart(){
   ctx.fillStyle='#080812';ctx.fillRect(0,0,W,H);
-  if(tilePat){ctx.save();ctx.globalAlpha=.5;ctx.translate(-G.cam.x%512,-G.cam.y%512);ctx.fillStyle=tilePat;ctx.fillRect(-512,-512,W+1024,H+1024);ctx.restore();}
+  if(tilePat){ctx.save();ctx.globalAlpha=.5;ctx.fillStyle=tilePat;ctx.fillRect(0,0,W,H);ctx.restore();}
   ctx.textAlign='center';
   ctx.shadowBlur=35;ctx.shadowColor='#cd853f';ctx.fillStyle='#cd853f';ctx.font='bold 62px monospace';ctx.fillText('PUMP',W/2,H/2-50);
   ctx.shadowColor='#daa520';ctx.fillStyle='#daa520';ctx.fillText('PIT',W/2,H/2+14);ctx.shadowBlur=0;
@@ -895,7 +895,7 @@ let last=0;
 function loop(ts){
   const dt=Math.min((ts-last)/1000,.05);last=ts;ctx.clearRect(0,0,W,H);
   if(G.phase==='start')drawStart();
-  else if(G.phase==='dead'){if(tilePat){ctx.save();ctx.globalAlpha=.3;ctx.translate(-G.cam.x%512,-G.cam.y%512);ctx.fillStyle=tilePat;ctx.fillRect(-512,-512,W+1024,H+1024);ctx.restore();}drawDead();}
+  else if(G.phase==='dead'){if(tilePat){ctx.save();ctx.globalAlpha=.3;ctx.fillStyle=tilePat;ctx.fillRect(0,0,W,H);ctx.restore();}drawDead();}
   else{if(G.phase==='playing')update(dt);draw();if(G.phase==='levelup')drawLevelUp();}
   requestAnimationFrame(loop);
 }
@@ -916,6 +916,8 @@ c.addEventListener('click',e=>{
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 initBG();
+initGame();        // pre-init so G.cam / G.torches always exist
+G.phase='start';  // override to show start screen
 requestAnimationFrame(loop);
 </script>
 </body>
