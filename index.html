@@ -53,7 +53,7 @@
       display: flex; align-items: center; gap: 10px;
     }
     .nav-logo img {
-      width: 48px; height: 48px;
+      width: 62px; height: 62px;
       image-rendering: pixelated;
       filter: drop-shadow(0 0 10px rgba(205,133,63,.7));
       transition: filter 0.2s;
@@ -103,13 +103,12 @@
     .hero-logo {
       width: clamp(160px, 22vw, 280px);
       image-rendering: pixelated;
-      filter: drop-shadow(0 0 30px rgba(205,133,63,.7));
       animation: heroLogoFloat 5s ease-in-out infinite;
       margin-bottom: 20px;
     }
     @keyframes heroLogoFloat {
-      0%,100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 30px rgba(205,133,63,.7)); }
-      50%      { transform: translateY(-10px) scale(1.02); filter: drop-shadow(0 0 50px rgba(205,133,63,.9)); }
+      0%,100% { transform: translateY(0) scale(1); }
+      50%      { transform: translateY(-10px) scale(1.02); }
     }
     .hero-content {
       position: relative; z-index: 10;
@@ -325,7 +324,6 @@
   <div class="hero-content">
     <img src="davinci_design_a_logo_for__pumppit____a_solana_arcade_surv_processed.png" alt="PUMP PIT" class="hero-logo">
     <div class="hero-badge">$PUMP &nbsp;·&nbsp; SOLANA &nbsp;·&nbsp; 1 RUN / WALLET</div>
-    <p class="hero-sub">One Shot &nbsp;·&nbsp; No Replays &nbsp;·&nbsp; Earn $PUMP</p>
     <div class="hero-btns">
       <a href="game.html" class="btn-primary" id="btn-play" onclick="enterPit(event)">▶ PLAY NOW</a>
       <a href="#tokenomics" class="btn-secondary">BUY $PUMP</a>
