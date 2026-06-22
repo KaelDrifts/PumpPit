@@ -293,7 +293,7 @@
     <li><a href="#powerups">Power-Ups</a></li>
     <li><a href="#tokenomics">Tokenomics</a></li>
     <li><a href="#community">Community</a></li>
-    <li><a href="game.html" class="btn-nav">▶ PLAY NOW</a></li>
+    <li><a href="game.html" class="btn-nav" onclick="enterPit(event)">▶ PLAY NOW</a></li>
   </ul>
 </nav>
 
@@ -302,11 +302,11 @@
   <div class="hero-overlay"></div>
   <canvas id="ember-canvas"></canvas>
   <div class="hero-content">
-    <div class="hero-badge">$PUMP &nbsp;·&nbsp; SOLANA &nbsp;·&nbsp; ARCADE</div>
+    <div class="hero-badge">$PUMP &nbsp;·&nbsp; SOLANA &nbsp;·&nbsp; 1 RUN / WALLET</div>
     <h1 class="hero-title">⛏ PUMP PIT</h1>
-    <p class="hero-sub">Survive &nbsp;·&nbsp; Collect &nbsp;·&nbsp; Earn $PUMP</p>
+    <p class="hero-sub">One Shot &nbsp;·&nbsp; No Replays &nbsp;·&nbsp; Earn $PUMP</p>
     <div class="hero-btns">
-      <a href="game.html" class="btn-primary">▶ PLAY NOW</a>
+      <a href="game.html" class="btn-primary" id="btn-play" onclick="enterPit(event)">▶ PLAY NOW</a>
       <a href="#tokenomics" class="btn-secondary">BUY $PUMP</a>
     </div>
   </div>
@@ -325,12 +325,12 @@
       <h2 class="section-title">DESCEND INTO<br>THE PIT</h2>
       <p class="section-desc">
         PUMP PIT is a pixel-art survival arcade game on Solana.
-        Descend into the dungeon, survive relentless waves of enemies,
-        collect power-ups, and earn real $PUMP tokens based on your score.
+        Connect your Phantom wallet, enter the dungeon, and survive
+        relentless enemy waves to earn real $PUMP tokens.
       </p>
       <p class="section-desc" style="margin-top:18px;">
-        The deeper you go, the harder it gets — and the more you earn.
-        Simple controls. Brutal difficulty. Real on-chain rewards.
+        Each wallet gets <b style="color:var(--gold)">exactly one run</b>.
+        No second chances. No replays. Your score is permanent — make it count.
       </p>
     </div>
     <div class="char-wrap">
@@ -346,24 +346,24 @@
   <h2 class="section-title">HOW TO PLAY</h2>
   <div class="steps-grid">
     <div class="step-card">
-      <div class="step-icon">🎮</div>
-      <div class="step-title">MOVE</div>
-      <p class="step-desc">WASD or Arrow Keys to navigate the pit. Keep moving or die.</p>
+      <div class="step-icon">🔮</div>
+      <div class="step-title">CONNECT</div>
+      <p class="step-desc">Connect your Phantom wallet. This is your one and only run — no wallet, no entry.</p>
     </div>
     <div class="step-card">
-      <div class="step-icon">💀</div>
+      <div class="step-icon">🎮</div>
       <div class="step-title">SURVIVE</div>
-      <p class="step-desc">Enemies deal 10 HP on contact. Reach 0 HP and the run ends.</p>
+      <p class="step-desc">WASD or Arrow Keys. Enemies deal damage on contact. Reach 0 HP and it's over — forever.</p>
     </div>
     <div class="step-card">
       <div class="step-icon">⚡</div>
       <div class="step-title">COLLECT</div>
-      <p class="step-desc">Grab power-ups scattered across the dungeon to turn the tide.</p>
+      <p class="step-desc">Grab power-ups, open chests, and level up to stand a chance against the waves.</p>
     </div>
     <div class="step-card">
       <div class="step-icon">💰</div>
-      <div class="step-title">EARN</div>
-      <p class="step-desc">Score ÷ 10 = $PUMP tokens earned. Survive longer, earn more.</p>
+      <div class="step-title">CLAIM</div>
+      <p class="step-desc">Sign your score with Phantom. $PUMP tokens are distributed when the contract deploys.</p>
     </div>
   </div>
 </div>
@@ -438,7 +438,7 @@
       <a href="#" class="social-btn"><span class="s-icon">𝕏</span><span>TWITTER / X</span></a>
       <a href="#" class="social-btn"><span class="s-icon">✈️</span><span>TELEGRAM</span></a>
       <a href="#" class="social-btn"><span class="s-icon">💬</span><span>DISCORD</span></a>
-      <a href="game.html" class="social-btn"><span class="s-icon">⛏</span><span>PLAY THE GAME</span></a>
+      <a href="game.html" class="social-btn" onclick="enterPit(event)"><span class="s-icon">⛏</span><span>PLAY THE GAME</span></a>
     </div>
   </div>
 </div>
@@ -449,7 +449,131 @@
 </footer>
 
 <script>
-// Nav scroll
+// ── Pit transition ──────────────────────────────────────────────────────────
+function enterPit(e) {
+  e.preventDefault();
+  const dest = e.currentTarget.href;
+
+  // Build overlay
+  const ov = document.createElement('div');
+  ov.id = 'pit-overlay';
+  ov.style.cssText = [
+    'position:fixed','inset:0','z-index:10000',
+    'display:flex','align-items:center','justify-content:center',
+    'pointer-events:none','overflow:hidden',
+  ].join(';');
+
+  // Tunnel canvas
+  const cv = document.createElement('canvas');
+  ov.appendChild(cv);
+  document.body.appendChild(ov);
+
+  cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
+  cv.width  = window.innerWidth;
+  cv.height = window.innerHeight;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+
+  // Text label in the center
+  const lbl = document.createElement('div');
+  lbl.textContent = 'ENTERING THE PIT...';
+  lbl.style.cssText = [
+    'position:absolute','top:50%','left:50%',
+    'transform:translate(-50%,-50%)',
+    "font-family:'Press Start 2P',monospace",
+    'font-size:clamp(10px,2vw,18px)','color:#cd853f',
+    'letter-spacing:3px','opacity:0',
+    'text-shadow:0 0 30px #cd853f',
+    'white-space:nowrap',
+    'transition:opacity 0.4s ease 0.3s',
+    'pointer-events:none',
+  ].join(';');
+  ov.appendChild(lbl);
+
+  // Tunnel rings — pixel squares spiraling inward
+  const RINGS = 28;
+  const cols = ['#cd853f','#8b6f47','#ffd700','#ff8c00','#14f195'];
+
+  let start = null;
+  const DUR = 1500; // ms total
+
+  function frame(ts) {
+    if (!start) start = ts;
+    const elapsed = ts - start;
+    const prog = Math.min(elapsed / DUR, 1);         // 0→1
+    const ease = prog < 0.5
+      ? 2 * prog * prog
+      : 1 - Math.pow(-2 * prog + 2, 2) / 2;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // Background darkens
+    ctx.fillStyle = `rgba(6,3,0,${ease * 0.97})`;
+    ctx.fillRect(0, 0, W, H);
+
+    // Zoom-in tunnel rings
+    const maxR = Math.hypot(W, H) * 0.7;
+    for (let i = 0; i < RINGS; i++) {
+      // rings move from outside toward center as prog increases
+      const base = 1 - i / RINGS;
+      const t2   = (base + prog * 1.8) % 1;
+      const r    = maxR * (1 - t2);
+      const alpha = t2 < 0.1 ? t2 / 0.1 : t2 > 0.85 ? (1 - t2) / 0.15 : 1;
+      if (r < 2) continue;
+      // Draw as pixel-art square instead of circle for dungeon feel
+      const half = r;
+      const col  = cols[i % cols.length];
+      ctx.strokeStyle = col;
+      ctx.globalAlpha = alpha * (0.3 + ease * 0.5);
+      ctx.lineWidth   = 1 + i % 3;
+      ctx.strokeRect(W / 2 - half, H / 2 - half, half * 2, half * 2);
+    }
+    ctx.globalAlpha = 1;
+
+    // Grid lines converging toward center
+    ctx.strokeStyle = `rgba(205,133,63,${ease * 0.25})`;
+    ctx.lineWidth = 1;
+    const step = 80 * (1 - ease * 0.6);
+    if (step > 4) {
+      for (let x = W / 2 % step; x < W; x += step) {
+        const sx = W / 2 + (x - W / 2) * (1 - ease * 0.5);
+        ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, H); ctx.stroke();
+      }
+      for (let y = H / 2 % step; y < H; y += step) {
+        const sy = H / 2 + (y - H / 2) * (1 - ease * 0.5);
+        ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(W, sy); ctx.stroke();
+      }
+    }
+
+    // Center vortex glow
+    const grd = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, 120 * ease);
+    grd.addColorStop(0, `rgba(205,133,63,${ease * 0.9})`);
+    grd.addColorStop(0.4, `rgba(139,69,19,${ease * 0.4})`);
+    grd.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, W, H);
+
+    // Flash white + hard cut at the very end
+    if (prog > 0.88) {
+      const f = (prog - 0.88) / 0.12;
+      ctx.fillStyle = `rgba(6,3,0,${f})`;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // Show label once animation is underway
+    if (elapsed > 250) lbl.style.opacity = '1';
+
+    if (prog < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      window.location.href = dest;
+    }
+  }
+
+  requestAnimationFrame(frame);
+}
+
+// ── Nav scroll
 const nav = document.getElementById('nav');
 window.addEventListener('scroll', () => {
   nav.classList.toggle('solid', window.scrollY > 60);

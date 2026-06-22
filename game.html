@@ -25,11 +25,10 @@ const lerp=(a,b,t)=>a+(b-a)*t;
 const WORLD=4000;
 
 // ── SOLANA CONFIG ─────────────────────────────────────────────────────────────
-const SOLANA_RPC    = 'https://api.mainnet-beta.solana.com'; // swap to devnet for testing
-const PUMP_MINT     = '';          // ← paste your SPL token mint address here
+const SOLANA_RPC    = 'https://api.mainnet-beta.solana.com';
+const PUMP_MINT     = '';
 const PUMP_DECIMALS = 6;
-const POINTS_TO_PUMP= 0.01;       // 100 pts = 1 PUMP
-const COOLDOWN_MS   = 24*60*60*1000; // 24-hour cooldown per wallet
+const POINTS_TO_PUMP= 0.01;
 
 async function rpc(method,params=[]){
   try{
@@ -38,10 +37,11 @@ async function rpc(method,params=[]){
     return (await r.json()).result;
   }catch(e){return null;}
 }
-function getCooldown(addr){const v=localStorage.getItem('pumppit_cd_'+addr);return v?parseInt(v):0;}
-function setCooldown(addr,ms){localStorage.setItem('pumppit_cd_'+addr,Date.now()+ms);}
-function cooldownLeft(addr){return Math.max(0,getCooldown(addr)-Date.now());}
-function fmtTime(ms){const s=Math.ceil(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=s%60;return h?h+'h '+m+'m':m?m+'m '+ss+'s':ss+'s';}
+// One run per wallet — permanent, not a cooldown
+function hasRunUsed(addr){return !!localStorage.getItem('pumppit_used_'+addr);}
+function markRunUsed(addr){localStorage.setItem('pumppit_used_'+addr,'1');}
+function hasRunClaimed(addr){return !!localStorage.getItem('pumppit_claimed_'+addr);}
+function markRunClaimed(addr){localStorage.setItem('pumppit_claimed_'+addr,'1');}
 
 // ── CHARACTER CUSTOMISATION ───────────────────────────────────────────────────
 const HAIR_OPTS=[
@@ -101,7 +101,6 @@ async function fetchBalances(){
 async function claimRewards(){
   if(WALLET.claimState==='loading')return;
   if(!WALLET.connected){connectWallet();return;}
-  const cl=cooldownLeft(WALLET.address);if(cl>0){addFloat('Wallet on cooldown!',WORLD/2,WORLD/2,'#ef4444',true);return;}
   WALLET.claimState='loading';
   const pump=Math.floor(G.finalScore*POINTS_TO_PUMP*100)/100;
   WALLET.claimAmount=pump;
@@ -109,11 +108,10 @@ async function claimRewards(){
     const msg=`PumpPit Claim\nScore: ${G.finalScore}\nEarned: ${pump} PUMP\nWallet: ${WALLET.address}\nTimestamp: ${Date.now()}`;
     const encoded=new TextEncoder().encode(msg);
     const{signature}=await window.solana.signMessage(encoded,'utf8');
-    // Convert signature bytes to base58-ish string for display
     const sigHex=Array.from(signature).map(b=>b.toString(16).padStart(2,'0')).join('').slice(0,20);
     WALLET.claimSig=sigHex+'...';
     WALLET.claimState='success';
-    setCooldown(WALLET.address,COOLDOWN_MS);
+    markRunClaimed(WALLET.address);
     fetchBalances();
   }catch(e){
     WALLET.claimState='error';
@@ -284,6 +282,7 @@ function mkPlayer(){
     dir:1,aimX:1,aimY:0,invincible:0,tokens:0,walkCycle:0,moving:false};
 }
 function initGame(){
+  if(WALLET.connected)markRunUsed(WALLET.address);
   G={phase:'playing',time:0,frame:0,menuTab:'play',menuTime:0,
     player:mkPlayer(),enemies:[],bullets:[],eBullets:[],
     xpOrbs:[],particles:[],floats:[],chests:[],
@@ -806,38 +805,30 @@ function drawDead(){
 
   // ── CLAIM SECTION ──────────────────────────────────────────────────────────
   const clY=H/2+108;
-  const cdL=WALLET.connected?cooldownLeft(WALLET.address):0;
   if(WALLET.claimState==='success'){
     ctx.fillStyle='#14f195';ctx.font='bold 13px monospace';
     ctx.fillText('✓ Claim signed! '+WALLET.claimAmount+' PUMP verified',W/2,clY);
     ctx.fillStyle='#8b6f47';ctx.font='10px monospace';
     ctx.fillText('Sig: '+WALLET.claimSig,W/2,clY+18);
     ctx.fillStyle='#5c4033';ctx.font='10px monospace';
-    ctx.fillText('On-chain minting active when contract deploys',W/2,clY+34);
+    ctx.fillText('Tokens distributed when contract deploys',W/2,clY+34);
     if(Math.floor(Date.now()/600)%2===0)pxText('ENTER / SPACE → MENU',W/2,clY+56,13,'#cd853f','center');
   }else if(WALLET.claimState==='loading'){
     const dots='.'.repeat((Math.floor(Date.now()/300)%4)+1);
     ctx.fillStyle='#14f195';ctx.font='bold 13px monospace';ctx.fillText('Signing with Phantom'+dots,W/2,clY+12);
   }else if(WALLET.claimState==='error'){
     ctx.fillStyle='#ef4444';ctx.font='bold 12px monospace';ctx.fillText('✗ '+WALLET.claimError,W/2,clY);
-    // Retry btn
     DEAD_BTNS.push({x:W/2-60,y:clY+10,w:120,h:28,action:claimRewards});
     ctx.fillStyle='rgba(30,5,5,.9)';ctx.fillRect(W/2-60,clY+10,120,28);ctx.strokeStyle='#ef4444';ctx.lineWidth=1;ctx.strokeRect(W/2-60,clY+10,120,28);
     ctx.fillStyle='#ef4444';ctx.font='bold 11px monospace';ctx.fillText('RETRY',W/2,clY+28);
     if(Math.floor(Date.now()/600)%2===0)pxText('ENTER / SPACE → MENU',W/2,clY+52,13,'#cd853f','center');
   }else{
-    // idle — show claim button if wallet connected
+    // idle — connect to claim or show claim button
     if(!WALLET.connected){
       DEAD_BTNS.push({x:W/2-110,y:clY-4,w:220,h:32,action:connectWallet});
       ctx.shadowBlur=8;ctx.shadowColor='#a78bfa';
       ctx.fillStyle='rgba(20,5,30,.9)';ctx.fillRect(W/2-110,clY-4,220,32);ctx.strokeStyle='#a78bfa';ctx.lineWidth=1;ctx.strokeRect(W/2-110,clY-4,220,32);
       ctx.fillStyle='#a78bfa';ctx.font='bold 12px monospace';ctx.fillText('🔮 Connect wallet to claim '+G.pumpEarned+' PUMP',W/2,clY+16);ctx.shadowBlur=0;
-    }else if(cdL>0){
-      ctx.fillStyle='#5c4033';ctx.font='bold 11px monospace';
-      ctx.fillText('⏳ Wallet cooldown: '+fmtTime(cdL),W/2,clY+8);
-      DEAD_BTNS.push({x:W/2-90,y:clY+18,w:180,h:26,action:connectWallet});
-      ctx.fillStyle='rgba(20,8,0,.7)';ctx.fillRect(W/2-90,clY+18,180,26);ctx.strokeStyle='#5c4033';ctx.lineWidth=1;ctx.strokeRect(W/2-90,clY+18,180,26);
-      ctx.fillStyle='#8b4513';ctx.font='bold 10px monospace';ctx.fillText('Play with another wallet',W/2,clY+34);
     }else{
       DEAD_BTNS.push({x:W/2-130,y:clY-6,w:260,h:36,action:claimRewards});
       const cp=.75+Math.sin(Date.now()*.004)*.25;
@@ -845,8 +836,7 @@ function drawDead(){
       ctx.fillStyle='rgba(0,20,10,.95)';ctx.fillRect(W/2-130,clY-6,260,36);ctx.strokeStyle=`rgba(20,241,149,${cp})`;ctx.lineWidth=2;ctx.strokeRect(W/2-130,clY-6,260,36);
       ctx.fillStyle='#14f195';ctx.font='bold 14px monospace';ctx.fillText('◎  CLAIM '+G.pumpEarned+' PUMP ON SOLANA',W/2,clY+16);ctx.shadowBlur=0;
     }
-    if(WALLET.connected&&cdL===0&&Math.floor(Date.now()/600)%2===0){}
-    else if(Math.floor(Date.now()/600)%2===0)pxText('ENTER / SPACE → MENU',W/2,clY+54,13,'#cd853f','center');
+    if(Math.floor(Date.now()/600)%2===0)pxText('ENTER / SPACE → MENU',W/2,clY+54,13,'#cd853f','center');
   }
   ctx.textAlign='left';
 }
@@ -950,15 +940,28 @@ function drawMenuPlay(t){
   ctx.fillStyle='rgba(10,20,10,.8)';ctx.fillRect(RX,RY+228,RW,24);ctx.strokeStyle='#14f19540';ctx.lineWidth=1;ctx.strokeRect(RX,RY+228,RW,24);
   ctx.fillStyle='#14f195';ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillText('◎ Buy $PUMP on pump.fun',RX+RW/2,RY+244);ctx.textAlign='left';
 
-  // START button (big)
-  // START button with pulse glow
+  // START / wallet-gate button
   const pulse=.7+Math.sin(t*3)*.3;
-  MENU_BTNS.push({x:RX,y:PY+PH-64,w:RW,h:48,action:()=>initGame()});
-  ctx.shadowBlur=20*pulse;ctx.shadowColor='#daa520';
-  roundRect(RX,PY+PH-64,RW,48,8);ctx.fillStyle='rgba(50,25,0,.95)';ctx.fill();
-  ctx.strokeStyle='#daa520';ctx.lineWidth=2+pulse;roundRect(RX,PY+PH-64,RW,48,8);ctx.stroke();
-  ctx.fillStyle='#fef3c7';ctx.font='bold 16px monospace';ctx.textAlign='center';
-  ctx.fillText('▶  START GAME',RX+RW/2,PY+PH-34);ctx.textAlign='left';ctx.shadowBlur=0;
+  if(!WALLET.connected){
+    roundRect(RX,PY+PH-64,RW,48,8);ctx.fillStyle='rgba(15,7,0,.8)';ctx.fill();
+    ctx.strokeStyle='#3a2000';ctx.lineWidth=1;roundRect(RX,PY+PH-64,RW,48,8);ctx.stroke();
+    ctx.fillStyle='#5c4033';ctx.font='bold 11px monospace';ctx.textAlign='center';
+    ctx.fillText('Connect wallet to play',RX+RW/2,PY+PH-34);ctx.textAlign='left';
+  }else if(hasRunUsed(WALLET.address)){
+    roundRect(RX,PY+PH-64,RW,48,8);ctx.fillStyle='rgba(10,5,0,.9)';ctx.fill();
+    ctx.strokeStyle='#5c4033';ctx.lineWidth=1;roundRect(RX,PY+PH-64,RW,48,8);ctx.stroke();
+    ctx.fillStyle='#7c2d12';ctx.font='bold 12px monospace';ctx.textAlign='center';
+    ctx.fillText('✗  RUN USED',RX+RW/2,PY+PH-42);
+    ctx.fillStyle='#5c4033';ctx.font='9px monospace';
+    ctx.fillText('1 run per wallet · no replays',RX+RW/2,PY+PH-24);ctx.textAlign='left';
+  }else{
+    MENU_BTNS.push({x:RX,y:PY+PH-64,w:RW,h:48,action:()=>initGame()});
+    ctx.shadowBlur=20*pulse;ctx.shadowColor='#daa520';
+    roundRect(RX,PY+PH-64,RW,48,8);ctx.fillStyle='rgba(50,25,0,.95)';ctx.fill();
+    ctx.strokeStyle='#daa520';ctx.lineWidth=2+pulse;roundRect(RX,PY+PH-64,RW,48,8);ctx.stroke();
+    ctx.fillStyle='#fef3c7';ctx.font='bold 16px monospace';ctx.textAlign='center';
+    ctx.fillText('▶  ENTER THE PIT',RX+RW/2,PY+PH-34);ctx.textAlign='left';ctx.shadowBlur=0;
+  }
 }
 
 function drawMenuScores(){
