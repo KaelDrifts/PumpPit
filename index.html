@@ -53,10 +53,12 @@
       display: flex; align-items: center; gap: 10px;
     }
     .nav-logo img {
-      width: 36px; height: 36px;
+      width: 48px; height: 48px;
       image-rendering: pixelated;
-      filter: drop-shadow(0 0 8px rgba(205,133,63,.6));
+      filter: drop-shadow(0 0 10px rgba(205,133,63,.7));
+      transition: filter 0.2s;
     }
+    .nav-logo img:hover { filter: drop-shadow(0 0 18px rgba(205,133,63,1)); }
     .nav-links { display: flex; align-items: center; gap: 36px; list-style: none; }
     .nav-links a {
       color: #888; text-decoration: none;
@@ -99,11 +101,11 @@
     }
     #ember-canvas { position: absolute; inset: 0; pointer-events: none; }
     .hero-logo {
-      width: clamp(100px, 14vw, 160px);
+      width: clamp(160px, 22vw, 280px);
       image-rendering: pixelated;
       filter: drop-shadow(0 0 30px rgba(205,133,63,.7));
       animation: heroLogoFloat 5s ease-in-out infinite;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
     }
     @keyframes heroLogoFloat {
       0%,100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 30px rgba(205,133,63,.7)); }
@@ -305,8 +307,7 @@
 
 <nav id="nav">
   <a href="#" class="nav-logo">
-    <img src="davinci_design_a_logo_for__pumppit____a_solana_arcade_surv.png" alt="PUMP PIT Logo">
-    PUMP PIT
+    <img src="davinci_design_a_logo_for__pumppit____a_solana_arcade_surv_processed.png" alt="PUMP PIT Logo">
   </a>
   <ul class="nav-links">
     <li><a href="#howtoplay">How to Play</a></li>
@@ -322,9 +323,8 @@
   <div class="hero-overlay"></div>
   <canvas id="ember-canvas"></canvas>
   <div class="hero-content">
-    <img src="davinci_design_a_logo_for__pumppit____a_solana_arcade_surv.png" alt="PUMP PIT" class="hero-logo">
+    <img src="davinci_design_a_logo_for__pumppit____a_solana_arcade_surv_processed.png" alt="PUMP PIT" class="hero-logo">
     <div class="hero-badge">$PUMP &nbsp;·&nbsp; SOLANA &nbsp;·&nbsp; 1 RUN / WALLET</div>
-    <h1 class="hero-title">PUMP PIT</h1>
     <p class="hero-sub">One Shot &nbsp;·&nbsp; No Replays &nbsp;·&nbsp; Earn $PUMP</p>
     <div class="hero-btns">
       <a href="game.html" class="btn-primary" id="btn-play" onclick="enterPit(event)">▶ PLAY NOW</a>
