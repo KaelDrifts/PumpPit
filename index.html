@@ -50,6 +50,12 @@
       font-size: 13px; color: var(--gold);
       text-shadow: 0 0 22px var(--gold);
       text-decoration: none;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .nav-logo img {
+      width: 36px; height: 36px;
+      image-rendering: pixelated;
+      filter: drop-shadow(0 0 8px rgba(205,133,63,.6));
     }
     .nav-links { display: flex; align-items: center; gap: 36px; list-style: none; }
     .nav-links a {
@@ -92,6 +98,17 @@
         radial-gradient(ellipse at center, transparent 35%, rgba(6,3,0,.70) 100%);
     }
     #ember-canvas { position: absolute; inset: 0; pointer-events: none; }
+    .hero-logo {
+      width: clamp(100px, 14vw, 160px);
+      image-rendering: pixelated;
+      filter: drop-shadow(0 0 30px rgba(205,133,63,.7));
+      animation: heroLogoFloat 5s ease-in-out infinite;
+      margin-bottom: 16px;
+    }
+    @keyframes heroLogoFloat {
+      0%,100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 30px rgba(205,133,63,.7)); }
+      50%      { transform: translateY(-10px) scale(1.02); filter: drop-shadow(0 0 50px rgba(205,133,63,.9)); }
+    }
     .hero-content {
       position: relative; z-index: 10;
       text-align: center; padding: 0 24px;
@@ -287,7 +304,10 @@
 <body>
 
 <nav id="nav">
-  <a href="#" class="nav-logo">⛏ PUMP PIT</a>
+  <a href="#" class="nav-logo">
+    <img src="davinci_design_a_logo_for__pumppit____a_solana_arcade_surv.png" alt="PUMP PIT Logo">
+    PUMP PIT
+  </a>
   <ul class="nav-links">
     <li><a href="#howtoplay">How to Play</a></li>
     <li><a href="#powerups">Power-Ups</a></li>
@@ -302,8 +322,9 @@
   <div class="hero-overlay"></div>
   <canvas id="ember-canvas"></canvas>
   <div class="hero-content">
+    <img src="davinci_design_a_logo_for__pumppit____a_solana_arcade_surv.png" alt="PUMP PIT" class="hero-logo">
     <div class="hero-badge">$PUMP &nbsp;·&nbsp; SOLANA &nbsp;·&nbsp; 1 RUN / WALLET</div>
-    <h1 class="hero-title">⛏ PUMP PIT</h1>
+    <h1 class="hero-title">PUMP PIT</h1>
     <p class="hero-sub">One Shot &nbsp;·&nbsp; No Replays &nbsp;·&nbsp; Earn $PUMP</p>
     <div class="hero-btns">
       <a href="game.html" class="btn-primary" id="btn-play" onclick="enterPit(event)">▶ PLAY NOW</a>
@@ -449,119 +470,163 @@
 </footer>
 
 <script>
-// ── Pit transition ──────────────────────────────────────────────────────────
+// ── Pit transition — stone doors slam shut ─────────────────────────────────
 function enterPit(e) {
   e.preventDefault();
-  const dest = e.currentTarget.href;
+  var dest = e.currentTarget.href;
 
-  // Build overlay
-  const ov = document.createElement('div');
-  ov.id = 'pit-overlay';
-  ov.style.cssText = [
-    'position:fixed','inset:0','z-index:10000',
-    'display:flex','align-items:center','justify-content:center',
-    'pointer-events:none','overflow:hidden',
-  ].join(';');
-
-  // Tunnel canvas
-  const cv = document.createElement('canvas');
+  var ov = document.createElement('div');
+  ov.style.cssText = 'position:fixed;inset:0;z-index:10000;pointer-events:all;overflow:hidden;';
+  var cv = document.createElement('canvas');
+  cv.width  = window.innerWidth;
+  cv.height = window.innerHeight;
+  cv.style.cssText = 'display:block;width:100%;height:100%;';
   ov.appendChild(cv);
   document.body.appendChild(ov);
 
-  cv.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
-  cv.width  = window.innerWidth;
-  cv.height = window.innerHeight;
-  const ctx = cv.getContext('2d');
-  const W = cv.width, H = cv.height;
+  var ctx = cv.getContext('2d');
+  var W = cv.width, H = cv.height;
+  var PANEL = Math.ceil(W / 2) + 4; // each door panel width (slight overlap at seam)
 
-  // Text label in the center
-  const lbl = document.createElement('div');
-  lbl.textContent = 'ENTERING THE PIT...';
-  lbl.style.cssText = [
-    'position:absolute','top:50%','left:50%',
-    'transform:translate(-50%,-50%)',
-    "font-family:'Press Start 2P',monospace",
-    'font-size:clamp(10px,2vw,18px)','color:#cd853f',
-    'letter-spacing:3px','opacity:0',
-    'text-shadow:0 0 30px #cd853f',
-    'white-space:nowrap',
-    'transition:opacity 0.4s ease 0.3s',
-    'pointer-events:none',
-  ].join(';');
-  ov.appendChild(lbl);
+  // Pre-render a stone brick texture onto an offscreen canvas
+  function makeStoneTex(w, h, seed) {
+    var oc = document.createElement('canvas');
+    oc.width = w; oc.height = h;
+    var sc = oc.getContext('2d');
+    var s = seed;
+    function rng() { s = (s * 1664525 + 1013904223) | 0; return (s >>> 0) / 4294967295; }
+    sc.fillStyle = '#100b06'; sc.fillRect(0, 0, w, h);
+    var bh = 30, bw = 54;
+    for (var row = 0; row <= Math.ceil(h / bh) + 1; row++) {
+      var by = row * bh;
+      var off = row % 2 === 0 ? 0 : bw / 2;
+      // horizontal mortar
+      sc.fillStyle = '#060402'; sc.fillRect(0, by, w, 1);
+      for (var col = -1; col <= Math.ceil(w / bw) + 1; col++) {
+        var bx = col * bw + off;
+        var shade = 18 + Math.floor(rng() * 9);
+        sc.fillStyle = 'rgb(' + (shade+4) + ',' + (shade+2) + ',' + shade + ')';
+        sc.fillRect(bx + 1, by + 1, bw - 2, bh - 2);
+        // top highlight
+        sc.fillStyle = 'rgba(205,133,63,' + (0.03 + rng() * 0.04) + ')';
+        sc.fillRect(bx + 1, by + 1, bw - 2, 2);
+        // vertical mortar
+        sc.fillStyle = '#060402'; sc.fillRect(bx, by, 1, bh);
+        // rare crack
+        if (rng() < 0.10) {
+          sc.strokeStyle = 'rgba(0,0,0,0.55)'; sc.lineWidth = 1;
+          sc.beginPath();
+          sc.moveTo(bx + bw*0.2 + rng()*bw*0.3, by + bh*0.15);
+          sc.lineTo(bx + bw*0.25 + rng()*bw*0.45, by + bh*0.85);
+          sc.stroke();
+        }
+      }
+    }
+    // Iron reinforcement band at inner edge
+    sc.fillStyle = '#1a1209';
+    sc.fillRect(w - 14, 0, 14, h);
+    sc.fillStyle = '#2a1e0e';
+    sc.fillRect(w - 12, 0, 3, h);
+    // Iron bolts
+    for (var i = 0; i < 6; i++) {
+      sc.fillStyle = '#3a2a14';
+      sc.beginPath();
+      sc.arc(w - 7, h * (0.1 + i * 0.15), 5, 0, Math.PI * 2);
+      sc.fill();
+      sc.fillStyle = '#5a4020';
+      sc.beginPath();
+      sc.arc(w - 8, h * (0.1 + i * 0.15) - 1, 2, 0, Math.PI * 2);
+      sc.fill();
+    }
+    return oc;
+  }
 
-  // Tunnel rings — pixel squares spiraling inward
-  const RINGS = 28;
-  const cols = ['#cd853f','#8b6f47','#ffd700','#ff8c00','#14f195'];
+  var stoneL = makeStoneTex(PANEL, H, 42);
+  var stoneR = makeStoneTex(PANEL, H, 137);
 
-  let start = null;
-  const DUR = 1500; // ms total
+  // Flip stoneR horizontally so bolts face right side inward
+  var stoneRFlip = document.createElement('canvas');
+  stoneRFlip.width = PANEL; stoneRFlip.height = H;
+  var rfc = stoneRFlip.getContext('2d');
+  rfc.save(); rfc.translate(PANEL, 0); rfc.scale(-1, 1);
+  rfc.drawImage(stoneR, 0, 0);
+  rfc.restore();
+
+  // Sparks
+  var sparks = [], impacted = false;
+
+  var DUR = 950, t0 = null;
+  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
 
   function frame(ts) {
-    if (!start) start = ts;
-    const elapsed = ts - start;
-    const prog = Math.min(elapsed / DUR, 1);         // 0→1
-    const ease = prog < 0.5
-      ? 2 * prog * prog
-      : 1 - Math.pow(-2 * prog + 2, 2) / 2;
+    if (!t0) t0 = ts;
+    var elapsed = ts - t0;
+    var prog = Math.min(elapsed / DUR, 1);
 
     ctx.clearRect(0, 0, W, H);
 
-    // Background darkens
-    ctx.fillStyle = `rgba(6,3,0,${ease * 0.97})`;
-    ctx.fillRect(0, 0, W, H);
+    // Phase 1 (0→0.58): doors slide in from edges
+    var slide = prog < 0.58 ? easeOut(prog / 0.58) : 1;
+    var leftX  = -PANEL + PANEL * slide;   // left door: from -PANEL → 0
+    var rightX = W - PANEL * slide;        // right door: from W → W-PANEL
 
-    // Zoom-in tunnel rings
-    const maxR = Math.hypot(W, H) * 0.7;
-    for (let i = 0; i < RINGS; i++) {
-      // rings move from outside toward center as prog increases
-      const base = 1 - i / RINGS;
-      const t2   = (base + prog * 1.8) % 1;
-      const r    = maxR * (1 - t2);
-      const alpha = t2 < 0.1 ? t2 / 0.1 : t2 > 0.85 ? (1 - t2) / 0.15 : 1;
-      if (r < 2) continue;
-      // Draw as pixel-art square instead of circle for dungeon feel
-      const half = r;
-      const col  = cols[i % cols.length];
-      ctx.strokeStyle = col;
-      ctx.globalAlpha = alpha * (0.3 + ease * 0.5);
-      ctx.lineWidth   = 1 + i % 3;
-      ctx.strokeRect(W / 2 - half, H / 2 - half, half * 2, half * 2);
+    ctx.drawImage(stoneL,    ~~leftX,  0);
+    ctx.drawImage(stoneRFlip, ~~rightX, 0);
+
+    // Dust trail along leading edges while sliding
+    if (prog < 0.6) {
+      var dustA = (1 - prog / 0.6) * 0.35;
+      // Left door right edge
+      var lgr = ctx.createLinearGradient(leftX + PANEL, 0, leftX + PANEL + 40, 0);
+      lgr.addColorStop(0, 'rgba(139,90,43,' + dustA + ')');
+      lgr.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = lgr; ctx.fillRect(leftX + PANEL, 0, 40, H);
+      // Right door left edge
+      var rgr = ctx.createLinearGradient(rightX, 0, rightX - 40, 0);
+      rgr.addColorStop(0, 'rgba(139,90,43,' + dustA + ')');
+      rgr.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = rgr; ctx.fillRect(rightX - 40, 0, 40, H);
+    }
+
+    // Impact: spawn sparks when doors meet
+    if (prog >= 0.58 && !impacted) {
+      impacted = true;
+      for (var i = 0; i < 40; i++) {
+        var a = (Math.random() - 0.5) * Math.PI * 1.4;
+        var sp = 2.5 + Math.random() * 5;
+        sparks.push({
+          x: W / 2, y: H * (0.15 + Math.random() * 0.7),
+          vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 0.8,
+          life: 1,
+          col: ['#cd853f','#ffd700','#ff8c00','#fff7cc','#ff5500'][Math.floor(Math.random()*5)]
+        });
+      }
+    }
+
+    // Update & draw sparks
+    for (var j = 0; j < sparks.length; j++) {
+      var sp2 = sparks[j];
+      sp2.x += sp2.vx; sp2.y += sp2.vy;
+      sp2.vy += 0.18; sp2.life -= 0.035;
+      if (sp2.life <= 0) continue;
+      ctx.globalAlpha = Math.max(0, sp2.life);
+      ctx.fillStyle = sp2.col;
+      ctx.fillRect(~~sp2.x - 1, ~~sp2.y - 1, 2, 2);
     }
     ctx.globalAlpha = 1;
 
-    // Grid lines converging toward center
-    ctx.strokeStyle = `rgba(205,133,63,${ease * 0.25})`;
-    ctx.lineWidth = 1;
-    const step = 80 * (1 - ease * 0.6);
-    if (step > 4) {
-      for (let x = W / 2 % step; x < W; x += step) {
-        const sx = W / 2 + (x - W / 2) * (1 - ease * 0.5);
-        ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, H); ctx.stroke();
-      }
-      for (let y = H / 2 % step; y < H; y += step) {
-        const sy = H / 2 + (y - H / 2) * (1 - ease * 0.5);
-        ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(W, sy); ctx.stroke();
-      }
+    // Seam flash at impact (0.58→0.70)
+    if (prog >= 0.58 && prog < 0.70) {
+      var f2 = (prog - 0.58) / 0.12;
+      ctx.fillStyle = 'rgba(205,133,63,' + ((1 - f2) * 0.85) + ')';
+      ctx.fillRect(W / 2 - 3, 0, 6, H);
     }
 
-    // Center vortex glow
-    const grd = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, 120 * ease);
-    grd.addColorStop(0, `rgba(205,133,63,${ease * 0.9})`);
-    grd.addColorStop(0.4, `rgba(139,69,19,${ease * 0.4})`);
-    grd.addColorStop(1, 'rgba(0,0,0,0)');
-    ctx.fillStyle = grd;
-    ctx.fillRect(0, 0, W, H);
-
-    // Flash white + hard cut at the very end
-    if (prog > 0.88) {
-      const f = (prog - 0.88) / 0.12;
-      ctx.fillStyle = `rgba(6,3,0,${f})`;
+    // Fade to black (0.72→1.0)
+    if (prog >= 0.72) {
+      ctx.fillStyle = 'rgba(6,3,0,' + ((prog - 0.72) / 0.28) + ')';
       ctx.fillRect(0, 0, W, H);
     }
-
-    // Show label once animation is underway
-    if (elapsed > 250) lbl.style.opacity = '1';
 
     if (prog < 1) {
       requestAnimationFrame(frame);
@@ -569,7 +634,6 @@ function enterPit(e) {
       window.location.href = dest;
     }
   }
-
   requestAnimationFrame(frame);
 }
 

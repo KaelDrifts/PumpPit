@@ -838,11 +838,78 @@ function drawDead(){
     }
     if(Math.floor(Date.now()/600)%2===0)pxText('ENTER / SPACE → MENU',W/2,clY+54,13,'#cd853f','center');
   }
+  // Back to landing page
+  DEAD_BTNS.push({x:W/2-84,y:clY+66,w:168,h:22,action:()=>window.location.href='index.html'});
+  ctx.fillStyle='rgba(6,3,0,0.5)';ctx.fillRect(W/2-84,clY+66,168,22);
+  ctx.strokeStyle='#2a1800';ctx.lineWidth=1;ctx.strokeRect(W/2-84,clY+66,168,22);
+  ctx.fillStyle='#5c4033';ctx.font='9px monospace';ctx.textAlign='center';
+  ctx.fillText('← BACK TO MAIN SITE',W/2,clY+81);
+  ctx.textAlign='left';
+}
+
+// ── PAUSE MENU ────────────────────────────────────────────────────────────────
+function drawPause(){
+  PAUSE_BTNS=[];
+  // Freeze the game visually — overlay on top of current draw()
+  ctx.fillStyle='rgba(6,3,0,0.86)';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#8b4513';ctx.lineWidth=3;ctx.strokeRect(10,10,W-20,H-20);
+  ctx.strokeStyle='#5c3d1e';ctx.lineWidth=1;ctx.strokeRect(14,14,W-28,H-28);
+
+  const PW=300,PH=G.pauseShowLB?250:250,PX=Math.floor(W/2-PW/2),PY=Math.floor(H/2-PH/2);
+  ctx.fillStyle='rgba(12,6,0,0.97)';roundRect(PX,PY,PW,PH,8);ctx.fill();
+  ctx.strokeStyle='#8b4513';ctx.lineWidth=2;roundRect(PX,PY,PW,PH,8);ctx.stroke();
+  ctx.strokeStyle='#daa520';ctx.lineWidth=1;roundRect(PX+3,PY+3,PW-6,PH-6,6);ctx.stroke();
+
+  ctx.textAlign='center';
+  ctx.shadowBlur=16;ctx.shadowColor='#daa520';
+  pxText('PAUSED',W/2,PY+28,15,'#daa520','center');
+  ctx.shadowBlur=0;
+  ctx.strokeStyle='#5c4033';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(PX+16,PY+38);ctx.lineTo(PX+PW-16,PY+38);ctx.stroke();
+  ctx.fillStyle='#8b6f47';ctx.font='10px monospace';
+  ctx.fillText('⏱ '+Math.floor(G.time)+'s  ·  💀 '+G.kills+' kills  ·  Wave '+G.waveNum,W/2,PY+54);
+
+  const BW=PW-36,BX2=PX+18;
+  function pb(i,label,col,action){
+    const by=PY+66+i*44;
+    PAUSE_BTNS.push({x:BX2,y:by,w:BW,h:34,action});
+    roundRect(BX2,by,BW,34,5);ctx.fillStyle='rgba(20,8,0,0.9)';ctx.fill();
+    ctx.strokeStyle=col;ctx.lineWidth=1;roundRect(BX2,by,BW,34,5);ctx.stroke();
+    ctx.fillStyle=col;ctx.font='bold 12px monospace';ctx.textAlign='center';
+    ctx.fillText(label,W/2,by+22);
+  }
+
+  if(!G.pauseShowLB){
+    pb(0,'▶  RESUME','#daa520',()=>{G.phase=G.prevPhase||'playing';});
+    pb(1,'🏆  LEADERBOARD','#14f195',()=>{G.pauseShowLB=true;});
+    pb(2,'☠  FORFEIT RUN','#ef4444',()=>{endGame();});
+    pb(3,'← MAIN PAGE','#8b6f47',()=>{window.location.href='index.html';});
+  }else{
+    // Leaderboard inline
+    const lb=lbLoad();
+    ctx.fillStyle='#5c4033';ctx.font='bold 10px monospace';ctx.textAlign='center';
+    ctx.fillText('🏆 HALL OF FAME',W/2,PY+72);
+    if(lb.length===0){ctx.fillStyle='#5c4033';ctx.font='11px monospace';ctx.fillText('No runs yet',W/2,PY+120);}
+    else lb.slice(0,5).forEach((e,i)=>{
+      const ry=PY+90+i*26;
+      const rc=i===0?'#daa520':i===1?'#c0c0c0':i===2?'#cd7f32':'#8b6f47';
+      ctx.fillStyle=rc;ctx.font=(i===0?'bold ':'')+'10px monospace';
+      ctx.textAlign='left';ctx.fillText('#'+(i+1),PX+16,ry);
+      ctx.fillText((e.addr||'Wanderer').slice(0,14),PX+42,ry);
+      ctx.textAlign='right';ctx.fillText(e.score+' pts',PX+PW-16,ry);
+    });
+    ctx.textAlign='center';
+    const backY=PY+PH-44;
+    PAUSE_BTNS.push({x:BX2,y:backY,w:BW,h:30,action:()=>{G.pauseShowLB=false;}});
+    roundRect(BX2,backY,BW,30,5);ctx.fillStyle='rgba(20,8,0,0.9)';ctx.fill();
+    ctx.strokeStyle='#5c4033';ctx.lineWidth=1;roundRect(BX2,backY,BW,30,5);ctx.stroke();
+    ctx.fillStyle='#8b6f47';ctx.font='bold 11px monospace';ctx.fillText('← BACK',W/2,backY+20);
+  }
   ctx.textAlign='left';
 }
 
 // ── MENU / LANDING PAGE ───────────────────────────────────────────────────────
-let MENU_BTNS=[],DEAD_BTNS=[];
+let MENU_BTNS=[],DEAD_BTNS=[],PAUSE_BTNS=[];
 let menuWalkCycle=0;
 
 function menuBtn(x,y,w,h,label,color,action){
@@ -1042,21 +1109,25 @@ function loop(ts){
   }
   if(G.phase==='menu'){menuT+=dt;drawMenu(menuT);}
   else if(G.phase==='dead')drawDead();
-  else{if(G.phase==='playing')update(dt);draw();if(G.phase==='levelup')drawLevelUp();}
+  else{if(G.phase==='playing')update(dt);draw();if(G.phase==='levelup')drawLevelUp();else if(G.phase==='paused')drawPause();}
   requestAnimationFrame(loop);
 }
 
 // ── EVENTS ────────────────────────────────────────────────────────────────────
 window.addEventListener('keydown',e=>{
   if((e.key==='Enter'||e.key===' ')&&G.phase==='dead'){G.phase='menu';return;}
-  if(G.phase==='levelup'){const i=parseInt(e.key)-1;if(i>=0&&i<G.upgradeChoices.length)applyUpgrade(G.upgradeChoices[i]);}
-  if(e.key==='Escape'&&(G.phase==='playing'||G.phase==='levelup')){endGame();}
+  if(G.phase==='levelup'&&e.key!=='Escape'){const i=parseInt(e.key)-1;if(i>=0&&i<G.upgradeChoices.length)applyUpgrade(G.upgradeChoices[i]);}
+  if(e.key==='Escape'){
+    if(G.phase==='playing'||G.phase==='levelup'){G.prevPhase=G.phase;G.phase='paused';G.pauseShowLB=false;return;}
+    if(G.phase==='paused'){G.phase=G.prevPhase||'playing';return;}
+  }
 });
 c.addEventListener('click',e=>{
   const rect=c.getBoundingClientRect();
   const mx=(e.clientX-rect.left)*(W/rect.width),my=(e.clientY-rect.top)*(H/rect.height);
   if(G.phase==='menu'){for(const btn of MENU_BTNS){if(mx>=btn.x&&mx<=btn.x+btn.w&&my>=btn.y&&my<=btn.y+btn.h){btn.action();break;}}return;}
   if(G.phase==='dead'){for(const btn of DEAD_BTNS){if(mx>=btn.x&&mx<=btn.x+btn.w&&my>=btn.y&&my<=btn.y+btn.h){btn.action();break;}}return;}
+  if(G.phase==='paused'){for(const btn of PAUSE_BTNS){if(mx>=btn.x&&mx<=btn.x+btn.w&&my>=btn.y&&my<=btn.y+btn.h){btn.action();break;}}return;}
   if(G.phase==='levelup'){
     const chs=G.upgradeChoices,cw2=Math.min(190,(W-60)/chs.length),tot=chs.length*(cw2+14)-14,sx2=W/2-tot/2,cy=H/2-90;
     for(let i=0;i<chs.length;i++){const ccx=sx2+i*(cw2+14);if(mx>=ccx&&mx<=ccx+cw2&&my>=cy&&my<=cy+180){applyUpgrade(chs[i]);break;}}
