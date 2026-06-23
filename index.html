@@ -221,26 +221,22 @@
     .step-desc { font-size: 11px; color: #777; line-height: 1.9; }
 
     /* POWER-UPS */
-    .pu-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-top: 50px; }
+    .pu-label { font-family:'Press Start 2P',monospace; font-size:8px; color:var(--gold); letter-spacing:3px; margin:40px 0 16px; opacity:.6; }
+    .pu-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 12px; }
+    @media(max-width:700px){ .pu-grid { grid-template-columns: repeat(2,1fr); } }
     .pu-card {
       background: rgba(26,14,0,.5); border: 1px solid var(--border);
-      padding: 32px 16px; text-align: center;
-      transition: transform .3s, border-color .3s;
+      padding: 22px 12px 18px; text-align: center;
+      transition: transform .25s, border-color .25s, background .25s;
+      cursor: default;
     }
-    .pu-card:hover { transform: translateY(-5px); }
-    .pu-card[data-t="speed"]:hover  { border-color: #76ff03; }
-    .pu-card[data-t="shield"]:hover { border-color: #64b5f6; }
-    .pu-card[data-t="weapon"]:hover { border-color: #ffd700; }
-    .pu-card[data-t="heal"]:hover   { border-color: #ff4081; }
-    .pu-icon {
-      width: 46px; height: 46px;
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Press Start 2P', monospace;
-      font-size: 8px; font-weight: bold; color: #000;
-      margin: 0 auto 16px;
-    }
-    .pu-name { font-family: 'Press Start 2P', monospace; font-size: 8px; margin-bottom: 12px; }
-    .pu-desc { font-size: 10px; color: #777; line-height: 1.8; }
+    .pu-card:hover { transform: translateY(-4px); background: rgba(40,20,0,.7); }
+    .pu-card:hover { border-color: var(--card-glow, var(--gold)); }
+    .pu-emoji { font-size: 28px; display: block; margin-bottom: 10px; }
+    .pu-name { font-family: 'Press Start 2P', monospace; font-size: 7px; margin-bottom: 8px; }
+    .pu-desc { font-size: 10px; color: #666; line-height: 1.7; }
+    .pu-tag  { display:inline-block; font-size:8px; padding:2px 7px; margin-bottom:8px;
+               border-radius:2px; font-family:'Press Start 2P',monospace; }
 
     /* TOKENOMICS */
     #tokenomics-inner { text-align: center; }
@@ -392,27 +388,88 @@
 
 <div class="section-wrap" id="powerups" style="text-align:center">
   <div class="section-label">// arsenal</div>
-  <h2 class="section-title">POWER-UPS</h2>
+  <h2 class="section-title">WEAPONS &amp; UPGRADES</h2>
+
+  <p class="pu-label">— WEAPONS —</p>
   <div class="pu-grid">
-    <div class="pu-card" data-t="speed">
-      <div class="pu-icon" style="background:#76ff03">SPD</div>
-      <div class="pu-name" style="color:#76ff03">SPEED</div>
-      <p class="pu-desc">1.8× movement speed for 8 seconds. Outrun anything.</p>
+    <div class="pu-card" style="--card-glow:#f59e0b">
+      <span class="pu-emoji">🔫</span>
+      <div class="pu-name" style="color:#f59e0b">PISTOL</div>
+      <p class="pu-desc">High-speed single shots. Your starting weapon. 3 upgrade tiers.</p>
     </div>
-    <div class="pu-card" data-t="shield">
-      <div class="pu-icon" style="background:#64b5f6">SHD</div>
-      <div class="pu-name" style="color:#64b5f6">SHIELD</div>
-      <p class="pu-desc">Absorb one hit with zero damage. Break before it bends.</p>
+    <div class="pu-card" style="--card-glow:#ef4444">
+      <span class="pu-emoji">⚙️</span>
+      <div class="pu-name" style="color:#ef4444">MACHINE GUN</div>
+      <p class="pu-desc">9 rounds per second. Melts hordes. Unlocks spread shot upgrade.</p>
     </div>
-    <div class="pu-card" data-t="weapon">
-      <div class="pu-icon" style="background:#ffd700">GUN</div>
-      <div class="pu-name" style="color:#ffd700">WEAPON</div>
-      <p class="pu-desc">Auto-fires at the nearest enemy for 8 seconds.</p>
+    <div class="pu-card" style="--card-glow:#f97316">
+      <span class="pu-emoji">💥</span>
+      <div class="pu-name" style="color:#f97316">SHOTGUN</div>
+      <p class="pu-desc">5-pellet burst. Devastating at close range. Upgrades to 7 pellets.</p>
     </div>
-    <div class="pu-card" data-t="heal">
-      <div class="pu-icon" style="background:#ff4081">HP+</div>
-      <div class="pu-name" style="color:#ff4081">HEAL</div>
-      <p class="pu-desc">Restore 50 HP instantly. Pull back from the brink.</p>
+    <div class="pu-card" style="--card-glow:#a78bfa">
+      <span class="pu-emoji">🔆</span>
+      <div class="pu-name" style="color:#a78bfa">LASER</div>
+      <p class="pu-desc">Instant hit beam. No travel time. Pierces multiple enemies.</p>
+    </div>
+    <div class="pu-card" style="--card-glow:#84cc16">
+      <span class="pu-emoji">💣</span>
+      <div class="pu-name" style="color:#84cc16">GRENADE</div>
+      <p class="pu-desc">Explosive AOE. Massive blast radius. Clears tight clusters instantly.</p>
+    </div>
+    <div class="pu-card" style="--card-glow:#06b6d4">
+      <span class="pu-emoji">🚀</span>
+      <div class="pu-name" style="color:#06b6d4">MISSILES</div>
+      <p class="pu-desc">Homing projectiles. Lock onto enemies mid-flight. Upgrades to 3 at once.</p>
+    </div>
+    <div class="pu-card" style="--card-glow:#7dd3fc">
+      <span class="pu-emoji">❄️</span>
+      <div class="pu-name" style="color:#7dd3fc">FREEZE</div>
+      <p class="pu-desc">Radial ice burst. Freezes all enemies nearby. Shatter upgrade one-shots frozen foes.</p>
+    </div>
+    <div class="pu-card" style="--card-glow:#fb923c">
+      <span class="pu-emoji">🔥</span>
+      <div class="pu-name" style="color:#fb923c">FLAMETHROWER</div>
+      <p class="pu-desc">Continuous fire cone. Burn DOT. 16 hits per second at max rate.</p>
+    </div>
+  </div>
+
+  <p class="pu-label">— PASSIVES —</p>
+  <div class="pu-grid">
+    <div class="pu-card" style="--card-glow:#38bdf8">
+      <span class="pu-emoji">🛡️</span>
+      <div class="pu-name" style="color:#38bdf8">SHIELD</div>
+      <p class="pu-desc">Absorb one hit per charge. Regens over time. Stack up to 3.</p>
+    </div>
+    <div class="pu-card" style="--card-glow:#cd853f">
+      <span class="pu-emoji">🥋</span>
+      <div class="pu-name" style="color:#cd853f">ARMOR</div>
+      <p class="pu-desc">Flat damage reduction on every hit. Up to 50% DR at max level.</p>
+    </div>
+    <div class="pu-card" style="--card-glow:#f472b6">
+      <span class="pu-emoji">🧲</span>
+      <div class="pu-name" style="color:#f472b6">MAGNET</div>
+      <p class="pu-desc">Pulls XP orbs from farther away at higher speed. Never miss XP again.</p>
+    </div>
+    <div class="pu-card" style="--card-glow:#4ade80">
+      <span class="pu-emoji">👟</span>
+      <div class="pu-name" style="color:#4ade80">SPEED</div>
+      <p class="pu-desc">Raw movement boost. Up to 2× at max. Kite enemies effortlessly.</p>
+    </div>
+    <div class="pu-card" style="--card-glow:#f87171">
+      <span class="pu-emoji">❤️</span>
+      <div class="pu-name" style="color:#f87171">HEALTH</div>
+      <p class="pu-desc">Raise your max HP pool. Stack it twice for +150 HP total.</p>
+    </div>
+    <div class="pu-card" style="--card-glow:#fbbf24">
+      <span class="pu-emoji">⚡</span>
+      <div class="pu-name" style="color:#fbbf24">CRIT</div>
+      <p class="pu-desc">Chance to deal 3× damage. Up to 60% crit rate at max tier.</p>
+    </div>
+    <div class="pu-card" style="--card-glow:#e879f9; grid-column: span 2">
+      <span class="pu-emoji">🌐</span>
+      <div class="pu-name" style="color:#e879f9">DOMAIN EXPANSION</div>
+      <p class="pu-desc">Press <b style="color:#e879f9">SPACE</b> to unleash a shockwave that blasts every enemy outward. 20s cooldown. Zero survivors in range.</p>
     </div>
   </div>
 </div>

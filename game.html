@@ -832,18 +832,23 @@ function drawHUD(){
   if(G.streak>=3){const streakPulse=.8+Math.sin(G.time*6)*.2;ctx.globalAlpha=streakPulse;ctx.textAlign='center';ctx.font='bold 13px monospace';const sc2=G.streak>=10?'#c084fc':G.streak>=5?'#ef4444':'#f97316';ctx.shadowBlur=10;ctx.shadowColor=sc2;ctx.fillStyle=sc2;ctx.fillText('🔥 '+G.streak+'x STREAK',W/2,52);ctx.shadowBlur=0;ctx.globalAlpha=1;}
   if(G.damageMulti>1){ctx.textAlign='right';ctx.fillStyle='#f97316';ctx.font='bold 12px monospace';ctx.fillText('⚡ 2x DMG '+Math.ceil(G.damageMultTimer)+'s',W-10,H-54);}
   if(G.bossCount>0){ctx.textAlign='right';ctx.fillStyle='#8b4513';ctx.font='bold 11px monospace';ctx.fillText('💀 '+G.bossCount+' boss'+(G.bossCount>1?'es':''),W-10,H-36);}
-  // Ulti cooldown bar
-  {const uw=160,ux=W/2-uw/2,uy=H-46;
+  // Ulti bar — left side, vertical
+  {const uw=22,uh=110,ux=8,uy=H-uh-74;
   const ready=G.ultiCooldown<=0;
   const uf=ready?1:1-G.ultiCooldown/G.ultiMaxCooldown;
-  ctx.fillStyle='#1a0e06';ctx.fillRect(ux,uy,uw,14);
-  ctx.strokeStyle=ready?'#e879f9':'#4a108a';ctx.lineWidth=1;ctx.strokeRect(ux,uy,uw,14);
-  if(ready){ctx.shadowBlur=10;ctx.shadowColor='#c084fc';}
-  const ugr=ctx.createLinearGradient(ux,0,ux+uw,0);ugr.addColorStop(0,'#7c3aed');ugr.addColorStop(1,'#e879f9');
-  ctx.fillStyle=ugr;ctx.fillRect(ux,uy,uw*uf,14);ctx.shadowBlur=0;
-  ctx.textAlign='center';ctx.fillStyle=ready?'#e879f9':'#7c3aed';ctx.font='bold 9px monospace';
-  ctx.fillText(ready?'[ SPACE ] DOMAIN EXPANSION':'ULTI '+Math.ceil(G.ultiCooldown)+'s',W/2,uy+11);
-  ctx.textAlign='left';}
+  ctx.fillStyle='rgba(12,4,20,0.85)';ctx.fillRect(ux,uy,uw,uh);
+  ctx.strokeStyle=ready?'#e879f9':'#4a108a';ctx.lineWidth=1;ctx.strokeRect(ux,uy,uw,uh);
+  // Fill from bottom up
+  const ugr=ctx.createLinearGradient(0,uy+uh,0,uy);ugr.addColorStop(0,'#7c3aed');ugr.addColorStop(1,'#e879f9');
+  ctx.fillStyle=ugr;ctx.fillRect(ux,uy+uh*(1-uf),uw,uh*uf);
+  // Label rotated
+  ctx.save();ctx.translate(ux+uw/2,uy+uh/2);ctx.rotate(-Math.PI/2);
+  ctx.textAlign='center';ctx.font='bold 9px monospace';
+  ctx.fillStyle=ready?'#e879f9':'#5b21b6';
+  ctx.fillText(ready?'SPACE — ULTI':'ULTI '+Math.ceil(G.ultiCooldown)+'s',0,4);
+  ctx.restore();
+  // Pulse border when ready
+  if(ready&&Math.floor(G.time*3)%2===0){ctx.strokeStyle='#e879f9';ctx.lineWidth=2;ctx.strokeRect(ux-1,uy-1,uw+2,uh+2);}}
   ctx.textAlign='left';
   // Weapon mini-GUI — icon + name + upgrade dots, no cooldown bar
   const ww=G.player.weapons,slotW=52,slotH=58,gap=6;
