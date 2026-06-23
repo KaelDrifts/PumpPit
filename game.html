@@ -31,6 +31,9 @@ const PUMP_MINT     = '';
 const PUMP_DECIMALS = 6;
 const POINTS_TO_PUMP= 0.01;
 
+// Set to true to enforce 1 run per wallet (re-enable before launch)
+const ONE_RUN_PER_WALLET = false;
+
 async function rpc(method,params=[]){
   try{
     const r=await fetch(SOLANA_RPC,{method:'POST',headers:{'Content-Type':'application/json'},
@@ -38,11 +41,11 @@ async function rpc(method,params=[]){
     return (await r.json()).result;
   }catch(e){return null;}
 }
-// One run per wallet — permanent, not a cooldown
-function hasRunUsed(addr){return !!localStorage.getItem('pumppit_used_'+addr);}
-function markRunUsed(addr){localStorage.setItem('pumppit_used_'+addr,'1');}
-function hasRunClaimed(addr){return !!localStorage.getItem('pumppit_claimed_'+addr);}
-function markRunClaimed(addr){localStorage.setItem('pumppit_claimed_'+addr,'1');}
+// One run per wallet — flip ONE_RUN_PER_WALLET above to re-enable
+function hasRunUsed(addr){return ONE_RUN_PER_WALLET&&!!localStorage.getItem('pumppit_used_'+addr);}
+function markRunUsed(addr){if(ONE_RUN_PER_WALLET)localStorage.setItem('pumppit_used_'+addr,'1');}
+function hasRunClaimed(addr){return ONE_RUN_PER_WALLET&&!!localStorage.getItem('pumppit_claimed_'+addr);}
+function markRunClaimed(addr){if(ONE_RUN_PER_WALLET)localStorage.setItem('pumppit_claimed_'+addr,'1');}
 
 // ── CHARACTER CUSTOMISATION ───────────────────────────────────────────────────
 const HAIR_OPTS=[
