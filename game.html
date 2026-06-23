@@ -832,23 +832,41 @@ function drawHUD(){
   if(G.streak>=3){const streakPulse=.8+Math.sin(G.time*6)*.2;ctx.globalAlpha=streakPulse;ctx.textAlign='center';ctx.font='bold 13px monospace';const sc2=G.streak>=10?'#c084fc':G.streak>=5?'#ef4444':'#f97316';ctx.shadowBlur=10;ctx.shadowColor=sc2;ctx.fillStyle=sc2;ctx.fillText('🔥 '+G.streak+'x STREAK',W/2,52);ctx.shadowBlur=0;ctx.globalAlpha=1;}
   if(G.damageMulti>1){ctx.textAlign='right';ctx.fillStyle='#f97316';ctx.font='bold 12px monospace';ctx.fillText('⚡ 2x DMG '+Math.ceil(G.damageMultTimer)+'s',W-10,H-54);}
   if(G.bossCount>0){ctx.textAlign='right';ctx.fillStyle='#8b4513';ctx.font='bold 11px monospace';ctx.fillText('💀 '+G.bossCount+' boss'+(G.bossCount>1?'es':''),W-10,H-36);}
-  // Ulti bar — left side, vertical
-  {const uw=22,uh=110,ux=8,uy=H-uh-74;
-  const ready=G.ultiCooldown<=0;
+  // Ulti orb — bottom right corner
+  {const ready=G.ultiCooldown<=0;
   const uf=ready?1:1-G.ultiCooldown/G.ultiMaxCooldown;
-  ctx.fillStyle='rgba(12,4,20,0.85)';ctx.fillRect(ux,uy,uw,uh);
-  ctx.strokeStyle=ready?'#e879f9':'#4a108a';ctx.lineWidth=1;ctx.strokeRect(ux,uy,uw,uh);
-  // Fill from bottom up
-  const ugr=ctx.createLinearGradient(0,uy+uh,0,uy);ugr.addColorStop(0,'#7c3aed');ugr.addColorStop(1,'#e879f9');
-  ctx.fillStyle=ugr;ctx.fillRect(ux,uy+uh*(1-uf),uw,uh*uf);
-  // Label rotated
-  ctx.save();ctx.translate(ux+uw/2,uy+uh/2);ctx.rotate(-Math.PI/2);
-  ctx.textAlign='center';ctx.font='bold 9px monospace';
+  const R=38,cx2=W-R-14,cy2=H-R-14;
+  const pulse=ready?.08+Math.sin(G.time*5)*.06:0;
+  // Outer pulse ring
+  if(ready){
+    ctx.beginPath();ctx.arc(cx2,cy2,R+6+pulse*80,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(232,121,249,${0.25+pulse*2})`;ctx.lineWidth=2;ctx.stroke();
+    ctx.beginPath();ctx.arc(cx2,cy2,R+12+pulse*120,0,Math.PI*2);
+    ctx.strokeStyle=`rgba(124,58,237,${0.12+pulse})`;ctx.lineWidth=1;ctx.stroke();
+  }
+  // Dark background circle
+  ctx.beginPath();ctx.arc(cx2,cy2,R,0,Math.PI*2);
+  ctx.fillStyle='rgba(10,3,20,0.92)';ctx.fill();
+  // Progress arc (clockwise from top)
+  if(uf>0){
+    ctx.beginPath();ctx.arc(cx2,cy2,R,-Math.PI/2,-Math.PI/2+uf*Math.PI*2);
+    ctx.strokeStyle=ready?'#e879f9':'#7c3aed';ctx.lineWidth=5;ctx.stroke();
+    // Inner bright edge
+    ctx.beginPath();ctx.arc(cx2,cy2,R-3,-Math.PI/2,-Math.PI/2+uf*Math.PI*2);
+    ctx.strokeStyle=ready?`rgba(255,200,255,${0.6+pulse*4})`:'rgba(167,139,250,0.4)';ctx.lineWidth=2;ctx.stroke();
+  }
+  // Ring border
+  ctx.beginPath();ctx.arc(cx2,cy2,R,0,Math.PI*2);
+  ctx.strokeStyle=ready?'#e879f9':'#3b0764';ctx.lineWidth=1.5;ctx.stroke();
+  // Icon
+  ctx.font=ready?'22px sans-serif':'18px sans-serif';ctx.textAlign='center';
+  ctx.globalAlpha=ready?1:0.5+uf*0.5;
+  ctx.fillText('🌐',cx2,cy2+8);ctx.globalAlpha=1;
+  // Label below
+  ctx.font='bold 8px monospace';ctx.textAlign='center';
   ctx.fillStyle=ready?'#e879f9':'#5b21b6';
-  ctx.fillText(ready?'SPACE — ULTI':'ULTI '+Math.ceil(G.ultiCooldown)+'s',0,4);
-  ctx.restore();
-  // Pulse border when ready
-  if(ready&&Math.floor(G.time*3)%2===0){ctx.strokeStyle='#e879f9';ctx.lineWidth=2;ctx.strokeRect(ux-1,uy-1,uw+2,uh+2);}}
+  ctx.fillText(ready?'[ SPACE ]':Math.ceil(G.ultiCooldown)+'s',cx2,cy2+R+14);
+  if(ready){ctx.fillStyle='rgba(232,121,249,0.7)';ctx.font='bold 7px monospace';ctx.fillText('DOMAIN',cx2,cy2+R+24);}}
   ctx.textAlign='left';
   // Weapon mini-GUI — icon + name + upgrade dots, no cooldown bar
   const ww=G.player.weapons,slotW=52,slotH=58,gap=6;
