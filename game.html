@@ -197,14 +197,14 @@ rows:['BNNOOONONNB','BNO.YYY.ON.','BNOYYWYYON.','BNOYYWYYON.','BNOOYYYYON.','NNO
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
 const WDEFS={
-  pistol:      {name:'Pistol',       icon:'🔫',color:'#f59e0b',type:'bullet', dmg:15,rate:1.2,spd:420,rng:520,ups:['+50% Damage','Rapid Fire','Piercing']},
-  machinegun:  {name:'Machine Gun',  icon:'⚙️', color:'#ef4444',type:'bullet', dmg:8, rate:5,  spd:500,rng:450,ups:['+30% Rate','+40% Damage','Spread Shot']},
-  shotgun:     {name:'Shotgun',      icon:'💥', color:'#f97316',type:'shotgun',dmg:22,rate:0.6,spd:370,rng:300,pellets:5,sAngle:0.45,ups:['+60% Damage','+2 Pellets','Wide Spread']},
-  laser:       {name:'Laser',        icon:'🔆', color:'#a78bfa',type:'laser',  dmg:35,rate:0.7,len:320,laserW:6,ups:['+50% Damage','+30% Rate','Wide Beam']},
-  grenade:     {name:'Grenade',      icon:'💣', color:'#84cc16',type:'grenade',dmg:65,rate:0.4,spd:240,rng:350,blastR:85,ups:['+50% Radius','+60% Damage','+30% Rate']},
-  homing:      {name:'Missiles',     icon:'🚀', color:'#06b6d4',type:'homing', dmg:38,rate:0.8,spd:160,rng:600,trk:2.5,count:1,ups:['+50% Damage','+30% Track','+1 Missile']},
-  freeze:      {name:'Freeze',       icon:'❄️', color:'#7dd3fc',type:'freeze', dmg:12,rate:0.5,radius:130,dur:2.2,ups:['+50% Duration','+40% Area','Shatter']},
-  flamethrower:{name:'Flamethrower', icon:'🔥', color:'#fb923c',type:'flame',  dmg:22,rate:10, rng:190,fWidth:65,ups:['+50% Damage','+40% Range','Burn DOT']},
+  pistol:      {name:'Pistol',       icon:'🔫',color:'#f59e0b',type:'bullet', dmg:15,rate:2.2,spd:580,rng:540,ups:['+50% Damage','Rapid Fire','Piercing']},
+  machinegun:  {name:'Machine Gun',  icon:'⚙️', color:'#ef4444',type:'bullet', dmg:8, rate:9,  spd:620,rng:470,ups:['+30% Rate','+40% Damage','Spread Shot']},
+  shotgun:     {name:'Shotgun',      icon:'💥', color:'#f97316',type:'shotgun',dmg:22,rate:1.1,spd:500,rng:340,pellets:5,sAngle:0.28,ups:['+60% Damage','+2 Pellets','Wide Spread']},
+  laser:       {name:'Laser',        icon:'🔆', color:'#a78bfa',type:'laser',  dmg:35,rate:1.4,len:360,laserW:6,ups:['+50% Damage','+30% Rate','Wide Beam']},
+  grenade:     {name:'Grenade',      icon:'💣', color:'#84cc16',type:'grenade',dmg:65,rate:0.8,spd:300,rng:370,blastR:85,ups:['+50% Radius','+60% Damage','+30% Rate']},
+  homing:      {name:'Missiles',     icon:'🚀', color:'#06b6d4',type:'homing', dmg:38,rate:1.6,spd:220,rng:620,trk:3.5,count:1,ups:['+50% Damage','+30% Track','+1 Missile']},
+  freeze:      {name:'Freeze',       icon:'❄️', color:'#7dd3fc',type:'freeze', dmg:12,rate:1.0,radius:140,dur:2.2,ups:['+50% Duration','+40% Area','Shatter']},
+  flamethrower:{name:'Flamethrower', icon:'🔥', color:'#fb923c',type:'flame',  dmg:22,rate:16, rng:210,fWidth:60,ups:['+50% Damage','+40% Range','Burn DOT']},
 };
 const PDEFS={
   shield:{name:'Shield', icon:'🛡️',color:'#38bdf8',ups:['+1 Shield','Faster Regen']},
@@ -349,7 +349,15 @@ function fireWeapon(w,p,idx){
   const t=nearestEnemy(origin.x,origin.y,w.rng);
   // Use walk-aim direction for pistol (idx 0); secondary weapons always auto-target
   let ax=p.aimX,ay=p.aimY;
-  if(idx>0&&t){const d=Math.hypot(t.x-origin.x,t.y-origin.y)||1;ax=(t.x-origin.x)/d;ay=(t.y-origin.y)/d;}
+  if(idx>0&&t){
+    // Lead targeting: predict where enemy will be when bullet arrives
+    const dist=Math.hypot(t.x-origin.x,t.y-origin.y)||1;
+    const travelTime=w.spd?dist/w.spd:0;
+    const lx=(t.x+(t.vx||0)*travelTime)-origin.x;
+    const ly=(t.y+(t.vy||0)*travelTime)-origin.y;
+    const ld=Math.hypot(lx,ly)||1;
+    ax=lx/ld;ay=ly/ld;
+  }
   else if(!t&&w.type!=='freeze')return;
   w.muzzleFlash=0.08;snd('shoot');
   const ox=origin.x,oy=origin.y;
