@@ -587,7 +587,7 @@ function activateUlti(){
   if(G.ultiCooldown>0)return;
   G.ultiCooldown=G.ultiMaxCooldown;
   shakeScreen(18);
-  G.ultiWaves.push({x:G.player.x,y:G.player.y,r:0,maxR:WORLD,spd:520,dmg:180,age:0,hit:new Set()});
+  G.ultiWaves.push({x:G.player.x,y:G.player.y,r:0,maxR:700,spd:480,dmg:180,age:0,hit:new Set()});
   addParticles(G.player.x,G.player.y,'#c084fc',30,200);
   addFloat('DOMAIN EXPANSION',G.player.x,G.player.y-60,'#e879f9',true);
 }
@@ -781,14 +781,10 @@ function draw(){
   for(const w of G.ultiWaves){
     const sx=wx(w.x),sy=wy(w.y);
     const age=w.age,fadeOut=Math.max(0,1-age/2.5);
-    // Void fill inside the ring
-    const inner=Math.max(0,w.r-60);
-    if(inner>0){
-      const vg=ctx.createRadialGradient(sx,sy,inner*.95,sx,sy,w.r);
-      vg.addColorStop(0,'rgba(30,0,60,0)');
-      vg.addColorStop(.6,`rgba(80,0,120,${0.18*fadeOut})`);
-      vg.addColorStop(1,`rgba(192,132,252,${0.08*fadeOut})`);
-      ctx.fillStyle=vg;ctx.beginPath();ctx.arc(sx,sy,w.r,0,Math.PI*2);ctx.fill();
+    // Subtle void tint inside ring (no gradient — flat is fast)
+    if(w.r>20){
+      ctx.fillStyle=`rgba(60,0,90,${0.10*fadeOut})`;
+      ctx.beginPath();ctx.arc(sx,sy,w.r,0,Math.PI*2);ctx.fill();
     }
     // Ring itself — thick glowing stroke
     ctx.save();
