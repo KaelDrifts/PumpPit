@@ -228,10 +228,10 @@ const EDEFS={
   demon:     {n:'Demon',      spr:null,size:15,hp:60, dmg:15,spd:130,xp:40, tok:7, tier:3,chestType:'crystal', chestChance:.25},
   sorcerer:  {n:'Sorcerer',   spr:null,size:14,hp:55, dmg:14,spd:55, xp:35, tok:6, tier:3,chestType:'crystal', chestChance:.22,ranged:true,sRange:280,sRate:1.5},
   wyvern:    {n:'Wyvern',     spr:null,size:20,hp:80, dmg:18,spd:115,xp:50, tok:10,tier:3,chestType:'crystal', chestChance:.28},
-  zombieking:{n:'Zombie King',spr:null,size:30,hp:200,dmg:22,spd:58, xp:100,tok:25,tier:4,chestType:'boss_chest',chestChance:1,boss:true},
-  greatdemon:{n:'Gr. Demon',  spr:null,size:26,hp:150,dmg:26,spd:110,xp:80, tok:20,tier:4,chestType:'boss_chest',chestChance:1,boss:true},
-  overlord:  {n:'Overlord',   spr:null,size:34,hp:350,dmg:32,spd:75, xp:200,tok:100,tier:4,chestType:'boss_chest',chestChance:1,boss:true},
-  fireboss:  {n:'Fire Lord',  spr:null,size:40,hp:280,dmg:30,spd:80, xp:180,tok:80, tier:4,chestType:'boss_chest',chestChance:1,boss:true},
+  zombieking:{n:'Zombie King',spr:null,size:30,hp:900, dmg:35,spd:62, xp:100,tok:25,tier:4,chestType:'boss_chest',chestChance:1,boss:true},
+  greatdemon:{n:'Gr. Demon',  spr:null,size:26,hp:750, dmg:42,spd:115,xp:80, tok:20,tier:4,chestType:'boss_chest',chestChance:1,boss:true},
+  overlord:  {n:'Overlord',   spr:null,size:34,hp:1600,dmg:52,spd:78, xp:200,tok:100,tier:4,chestType:'boss_chest',chestChance:1,boss:true},
+  fireboss:  {n:'Fire Lord',  spr:null,size:40,hp:1300,dmg:48,spd:85, xp:180,tok:80, tier:4,chestType:'boss_chest',chestChance:1,boss:true},
 };
 EDEFS.zombie.spr=S_ZOMBIE;EDEFS.skeleton.spr=S_SKELETON;EDEFS.goblin.spr=S_GOBLIN;
 EDEFS.fastzombie.spr=S_FASTZOMBIE;EDEFS.witch.spr=S_WITCH;EDEFS.orc.spr=S_ORC;
@@ -387,7 +387,7 @@ function fireWeapon(w,p,idx){
     for(const e of G.enemies){const ex=e.x-ox,ey=e.y-oy,proj=ex*ax+ey*ay;if(proj>0&&proj<w.len&&Math.abs(ey*ax-ex*ay)<e.size+(w.laserW||6))damageEnemy(e,w.dmg,true);}
   }else if(w.type==='freeze'){
     w.freezeTimer=0.4;w.freezeOx=ox;w.freezeOy=oy;
-    for(const e of G.enemies){if(Math.hypot(e.x-ox,e.y-oy)<w.radius+e.size){if(w.shatter&&e.frozen>0)e.hp=0;else e.frozen=w.dur;damageEnemy(e,w.dmg,false);}}
+    for(const e of G.enemies){if(Math.hypot(e.x-ox,e.y-oy)<w.radius+e.size){if(w.shatter&&e.frozen>0&&!e.boss)e.hp=0;else e.frozen=e.boss?Math.min(0.4,w.dur):w.dur;damageEnemy(e,w.dmg,false);}}
   }
 }
 function updateWeapons(dt){
@@ -421,7 +421,7 @@ function explode(x,y,r,dmg){
 }
 function updateEBullets(dt){
   const p=G.player;
-  G.eBullets=G.eBullets.filter(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;if(b.life<=0)return false;if(Math.hypot(b.x-p.x,b.y-p.y)<14){damagePlayer(b.dmg);return false;}return true;});
+  G.eBullets=G.eBullets.filter(b=>{b.x+=b.vx*dt;b.y+=b.vy*dt;b.life-=dt;if(b.life<=0){if(b.isMeteor){explode(b.x,b.y,90,b.dmg);shakeScreen(14);}return false;}const hit=Math.hypot(b.x-p.x,b.y-p.y)<(b.isMeteor?22:14);if(hit){if(b.isMeteor){explode(b.x,b.y,90,b.dmg);shakeScreen(14);}else damagePlayer(b.dmg);return false;}return true;});
 }
 function mkEnemy(id,x,y){
   const d=EDEFS[id]||EDEFS.zombie,s=G.diffScale;
@@ -476,10 +476,64 @@ function updateEnemies(dt){
       if(d<e.sRange*.65){e.vx=lerp(e.vx,-dx/d*e.spd*fr,5*dt);e.vy=lerp(e.vy,-dy/d*e.spd*fr,5*dt);}
       e.shootTimer-=dt;if(e.shootTimer<=0){e.shootTimer=1/e.sRate;G.eBullets.push({x:e.x,y:e.y,vx:dx/d*165,vy:dy/d*165,dmg:e.dmg,r:6,color:'#cc4444',life:3});}
     }else{e.vx=lerp(e.vx,dx/d*e.spd*fr,8*dt);e.vy=lerp(e.vy,dy/d*e.spd*fr,8*dt);}
-    if(e.id==='fireboss'&&e.phase>=2&&Math.random()<.008)for(let j=0;j<5;j++){const a=Math.random()*Math.PI*2;G.eBullets.push({x:e.x,y:e.y,vx:Math.cos(a)*120,vy:Math.sin(a)*120,dmg:e.dmg*.5,r:7,color:'#ff6600',life:4});}
+    // ── Boss special powers ──────────────────────────────────────────────────
+    if(e.boss){
+      if(!e.atkTimer)e.atkTimer=0;
+      e.atkTimer-=dt;
+      const hp2=e.hp/e.maxHp;
+      // Phase 2: ≤65% HP
+      if(hp2<.65&&e.phase===1){e.phase=2;e.spd*=1.35;addFloat('⚡ PHASE 2',e.x,e.y-e.size-20,'#f97316',true);shakeScreen(16);}
+      // Phase 3: ≤25% HP — BERSERK
+      if(hp2<.25&&e.phase===2){e.phase=3;e.spd*=1.5;e.dmg=Math.floor(e.dmg*1.4);addFloat('💀 BERSERK',e.x,e.y-e.size-24,'#ef4444',true);shakeScreen(22);}
+
+      if(e.id==='zombieking'){
+        // Charge dash every 4s + spawn 2 zombies every 6s
+        const rate=e.phase>=3?2.5:e.phase>=2?3.5:5;
+        if(e.atkTimer<=0){e.atkTimer=rate;
+          const nd=d||1;e.vx=(dx/nd)*380;e.vy=(dy/nd)*380; // dash
+          if(G.frame%2===0)for(let j=0;j<2;j++)if(G.enemies.length<35)G.enemies.push(mkEnemy('zombie',e.x+rand(-60,60),e.y+rand(-60,60)));
+          addFloat('CHARGE!',e.x,e.y-e.size-14,'#22c55e',false);
+        }
+        // Shockwave ring of projectiles at phase 2+
+        if(e.phase>=2&&!e.waveTimer)e.waveTimer=0;
+        if(e.phase>=2){e.waveTimer-=dt;if(e.waveTimer<=0){e.waveTimer=e.phase>=3?2.5:4;const n=e.phase>=3?12:8;for(let j=0;j<n;j++){const a=j/n*Math.PI*2;G.eBullets.push({x:e.x,y:e.y,vx:Math.cos(a)*160,vy:Math.sin(a)*160,dmg:e.dmg*.6,r:8,color:'#22c55e',life:3.5});}}}
+      }else if(e.id==='greatdemon'){
+        // Triple-shot burst toward player every 1.8s; teleport every 7s
+        const rate=e.phase>=3?0.9:e.phase>=2?1.3:1.8;
+        if(e.atkTimer<=0){e.atkTimer=rate;
+          const nd=d||1;const spread=e.phase>=3?.5:.3;
+          for(let j=-1;j<=1;j++){const a=Math.atan2(dy,dx)+j*spread;G.eBullets.push({x:e.x,y:e.y,vx:Math.cos(a)*200,vy:Math.sin(a)*200,dmg:e.dmg*.7,r:9,color:'#ef4444',life:3});}
+          if(e.phase>=2&&Math.random()<.25){// teleport
+            e.x=clamp(p.x+Math.cos(Math.random()*Math.PI*2)*220,50,WORLD-50);
+            e.y=clamp(p.y+Math.sin(Math.random()*Math.PI*2)*220,50,WORLD-50);
+            addFloat('BLINK!',e.x,e.y-40,'#ef4444',false);
+          }
+        }
+      }else if(e.id==='overlord'){
+        // Homing missile salvo every 3s + screen edges bounce bullets
+        const rate=e.phase>=3?1.5:e.phase>=2?2:3;
+        if(e.atkTimer<=0){e.atkTimer=rate;
+          const count=e.phase>=3?8:e.phase>=2?5:3;
+          for(let j=0;j<count;j++){const a=j/count*Math.PI*2;const b={x:e.x,y:e.y,vx:Math.cos(a)*140,vy:Math.sin(a)*140,dmg:e.dmg*.65,r:8,color:'#8b5cf6',life:5,isHoming:true,trk:1.8,hits:new Set()};G.bullets.push(b);}// homing reuse
+          for(let j=0;j<count;j++){const a=j/count*Math.PI*2;G.eBullets.push({x:e.x,y:e.y,vx:Math.cos(a)*180,vy:Math.sin(a)*180,dmg:e.dmg*.5,r:7,color:'#a855f7',life:4});}
+          shakeScreen(8);
+        }
+      }else if(e.id==='fireboss'){
+        // Fire spiral + ring burst
+        const spiritChance=e.phase>=3?.018:e.phase>=2?.012:.006;
+        if(Math.random()<spiritChance){const n=e.phase>=3?8:5;for(let j=0;j<n;j++){const a=G.time*2+j/n*Math.PI*2;G.eBullets.push({x:e.x,y:e.y,vx:Math.cos(a)*145,vy:Math.sin(a)*145,dmg:e.dmg*.55,r:8,color:'#ff6600',life:4});}}
+        // Meteor drop at phase 2+: large slow projectile that explodes on contact
+        if(e.phase>=2&&!e.meteorTimer)e.meteorTimer=0;
+        if(e.phase>=2){e.meteorTimer-=dt;if(e.meteorTimer<=0){e.meteorTimer=e.phase>=3?3:5;
+          const tx=p.x+rand(-80,80),ty=p.y+rand(-80,80);
+          G.eBullets.push({x:tx-200+rand(-100,100),y:ty-300,vx:rand(-20,20),vy:220,dmg:e.dmg*1.2,r:16,color:'#ff4400',life:3,isMeteor:true});
+          addFloat('☄',wx(tx),wy(ty)-20,'#ff6600',false);
+        }}
+      }
+    }
+    // ── end boss powers ──────────────────────────────────────────────────────
     e.x=clamp(e.x+e.vx*dt,20,WORLD-20);e.y=clamp(e.y+e.vy*dt,20,WORLD-20);
-    if(d<e.size+14&&p.invincible<=0){damagePlayer(e.dmg);if(e.knockback){const nd=Math.hypot(p.x-e.x,p.y-e.y)||1;p.vx+=(p.x-e.x)/nd*290;p.vy+=(p.y-e.y)/nd*290;}}
-    if(e.boss&&e.hp<e.maxHp*.5&&e.phase===1){e.phase=2;e.spd*=1.3;addFloat('ENRAGED!',e.x,e.y-e.size-20,'#f97316',true);shakeScreen(12);}
+    if(d<e.size+14&&p.invincible<=0){damagePlayer(e.dmg);if(e.knockback){const nd2=Math.hypot(p.x-e.x,p.y-e.y)||1;p.vx+=(p.x-e.x)/nd2*290;p.vy+=(p.y-e.y)/nd2*290;}}
   }
   for(let i=dead.length-1;i>=0;i--)G.enemies.splice(dead[i],1);
 }
