@@ -6,8 +6,8 @@
 <title>PumpPit</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#0d0a08;display:flex;align-items:center;justify-content:center;height:100vh;overflow:hidden;font-family:'Courier New',monospace}
-canvas{display:block;touch-action:none}
+html,body{width:100%;height:100%;overflow:hidden;background:#0d0a08;font-family:'Courier New',monospace}
+canvas{display:block;touch-action:none;position:fixed;top:0;left:0;}
 </style>
 </head>
 <body>
@@ -16,7 +16,7 @@ canvas{display:block;touch-action:none}
 const c=document.getElementById('c');
 const ctx=c.getContext('2d');
 let W=0,H=0;
-function resize(){W=c.width=Math.min(window.innerWidth,900);H=c.height=Math.min(window.innerHeight,640);}
+function resize(){W=c.width=window.innerWidth;H=c.height=window.innerHeight;}
 resize();window.addEventListener('resize',resize);
 const LOGO_IMG=new Image();LOGO_IMG.src='davinci_design_a_logo_for__pumppit____a_solana_arcade_surv_processed.png';
 const rand=(a,b)=>a+Math.random()*(b-a);
