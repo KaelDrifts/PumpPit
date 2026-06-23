@@ -968,7 +968,6 @@ function drawMenuPlay(t){
   // Wallet status block
   if(WALLET.connected){
     const short=WALLET.address.slice(0,4)+'...'+WALLET.address.slice(-4);
-    const cdL=cooldownLeft(WALLET.address);
     // Green dot + address
     ctx.fillStyle='#14f195';ctx.beginPath();ctx.arc(RX+5,RY+34,4,0,Math.PI*2);ctx.fill();
     ctx.fillStyle='#14f195';ctx.font='bold 11px monospace';ctx.fillText('Connected',RX+14,RY+38);
@@ -979,9 +978,7 @@ function drawMenuPlay(t){
     if(WALLET.pumpBalance!=null){
       ctx.fillStyle='#14f195';ctx.fillText('⬡ '+(WALLET.pumpBalance).toLocaleString()+' PUMP',RX,RY+84);}
     else if(!PUMP_MINT){ctx.fillStyle='#5c4033';ctx.font='9px monospace';ctx.fillText('Set PUMP_MINT for balance',RX,RY+84);}
-    if(cdL>0){
-      ctx.fillStyle='#f97316';ctx.font='9px monospace';ctx.fillText('⏳ Cooldown: '+fmtTime(cdL),RX,RY+100);}
-    menuBtn(RX,RY+108,RW,26,'Disconnect','#5c4033',()=>connectWallet());
+    menuBtn(RX,RY+100,RW,26,'Disconnect','#5c4033',()=>connectWallet());
   }else if(WALLET.loading){
     const dots='.'.repeat((Math.floor(Date.now()/300)%4)+1);
     ctx.fillStyle='#cd853f';ctx.font='11px monospace';ctx.fillText('Connecting'+dots,RX,RY+44);
