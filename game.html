@@ -81,10 +81,20 @@ async function connectWallet(){
   try{
     if(!window?.solana?.isPhantom){window.open('https://phantom.app/','_blank');WALLET.loading=false;return;}
     const r=await window.solana.connect();
-    WALLET.address=r.publicKey.toString();WALLET.connected=true;
+    const pk=r?.publicKey?.toString?.();
+    if(!pk){WALLET.loading=false;return;}
+    WALLET.address=pk;WALLET.connected=true;
     fetchBalances();
-  }catch(e){}
+  }catch(e){console.warn('[wallet connect]',e);}
   WALLET.loading=false;
+}
+async function tryAutoConnect(){
+  try{
+    if(!window?.solana?.isPhantom)return;
+    const r=await window.solana.connect({onlyIfTrusted:true});
+    const pk=r?.publicKey?.toString?.();
+    if(pk){WALLET.address=pk;WALLET.connected=true;fetchBalances();}
+  }catch(e){}
 }
 async function fetchBalances(){
   if(!WALLET.connected||!WALLET.address)return;
@@ -1097,16 +1107,19 @@ function drawMenu(t){
 // ── MAIN LOOP ─────────────────────────────────────────────────────────────────
 let last=0,menuT=0;
 function loop(ts){
-  const dt=Math.min((ts-last)/1000,.05);last=ts;
-  ctx.clearRect(0,0,W,H);
-  // Balance refresh every 5s while connected
-  if(WALLET.connected){
-    WALLET.balanceTimer-=dt;
-    if(WALLET.balanceTimer<=0)fetchBalances();
+  try{
+    const dt=Math.min((ts-last)/1000,.05);last=ts;
+    ctx.clearRect(0,0,W,H);
+    if(WALLET.connected){
+      WALLET.balanceTimer-=dt;
+      if(WALLET.balanceTimer<=0)fetchBalances();
+    }
+    if(G.phase==='menu'){menuT+=dt;drawMenu(menuT);}
+    else if(G.phase==='dead')drawDead();
+    else{if(G.phase==='playing')update(dt);draw();if(G.phase==='levelup')drawLevelUp();else if(G.phase==='paused')drawPause();}
+  }catch(err){
+    console.error('[PumpPit loop error]',err);
   }
-  if(G.phase==='menu'){menuT+=dt;drawMenu(menuT);}
-  else if(G.phase==='dead')drawDead();
-  else{if(G.phase==='playing')update(dt);draw();if(G.phase==='levelup')drawLevelUp();else if(G.phase==='paused')drawPause();}
   requestAnimationFrame(loop);
 }
 
@@ -1133,6 +1146,7 @@ c.addEventListener('click',e=>{
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 initBG();
+tryAutoConnect();
 requestAnimationFrame(loop);
 </script>
 </body>
