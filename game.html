@@ -1102,6 +1102,14 @@ function drawMenu(t){
   if(G.menuTab==='play')drawMenuPlay(t);
   else drawMenuScores();
 
+  // ← Back to site button (top-left)
+  const bw=130,bh=26,bx=12,by=12;
+  MENU_BTNS.push({x:bx,y:by,w:bw,h:bh,action:()=>window.location.href='index.html'});
+  ctx.fillStyle='rgba(6,3,0,0.8)';ctx.fillRect(bx,by,bw,bh);
+  ctx.strokeStyle='#3a2000';ctx.lineWidth=1;ctx.strokeRect(bx,by,bw,bh);
+  ctx.fillStyle='#5c4033';ctx.font='bold 10px monospace';ctx.textAlign='left';
+  ctx.fillText('← MAIN SITE',bx+10,by+17);
+
   // ── pump.fun / Solana footer ─────────────────────────────────────────────
   ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(0,H-28,W,28);
   ctx.fillStyle='#14f195';ctx.font='bold 10px monospace';ctx.textAlign='center';
