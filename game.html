@@ -18,6 +18,7 @@ const ctx=c.getContext('2d');
 let W=0,H=0;
 function resize(){W=c.width=Math.min(window.innerWidth,900);H=c.height=Math.min(window.innerHeight,640);}
 resize();window.addEventListener('resize',resize);
+const LOGO_IMG=new Image();LOGO_IMG.src='davinci_design_a_logo_for__pumppit____a_solana_arcade_surv_processed.png';
 const rand=(a,b)=>a+Math.random()*(b-a);
 const randI=(a,b)=>Math.floor(rand(a,b+1));
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -1084,13 +1085,21 @@ function drawMenu(t){
   MENU_BTNS=[];
   drawMenuBG(t);
 
-  // Title
-  ctx.textAlign='center';ctx.shadowBlur=30;ctx.shadowColor='#cd853f';pxText('PUMP',W/2-40,80,38,'#cd853f','center');pxText('PIT',W/2+38,80,38,'#daa520','center');ctx.shadowBlur=0;
+  // Title — pixel logo
+  const lw=100,lh=100;
+  if(LOGO_IMG.complete&&LOGO_IMG.naturalWidth>0){
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(LOGO_IMG,Math.floor(W/2-lw/2),6,lw,lh);
+    ctx.imageSmoothingEnabled=true;
+  }else{
+    ctx.textAlign='center';ctx.shadowBlur=30;ctx.shadowColor='#cd853f';
+    pxText('PUMP PIT',W/2,80,28,'#daa520','center');ctx.shadowBlur=0;
+  }
 
   // Tab bar
   const tabs=[['play','PLAY'],['scores','SCORES']];
   tabs.forEach(([id,label],i)=>{
-    const tx=W/2-80+i*84,ty=108,tw=76,th=28;
+    const tx=W/2-80+i*84,ty=128,tw=76,th=28;
     const active=G.menuTab===id;
     MENU_BTNS.push({x:tx,y:ty,w:tw,h:th,action:()=>{G.menuTab=id;}});
     ctx.fillStyle=active?'rgba(139,69,19,.7)':'rgba(20,10,2,.7)';roundRect(tx,ty,tw,th,5);ctx.fill();
