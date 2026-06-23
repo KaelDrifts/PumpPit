@@ -353,8 +353,8 @@ function fireWeapon(w,p,idx){
   const t=nearestEnemy(origin.x,origin.y,w.rng);
   // Use walk-aim direction for pistol (idx 0); secondary weapons always auto-target
   let ax=p.aimX,ay=p.aimY;
-  if(idx>0&&t){
-    // Lead targeting: predict where enemy will be when bullet arrives
+  if(t){
+    // Lead targeting for all weapons
     const dist=Math.hypot(t.x-origin.x,t.y-origin.y)||1;
     const travelTime=w.spd?dist/w.spd:0;
     const lx=(t.x+(t.vx||0)*travelTime)-origin.x;
@@ -541,18 +541,15 @@ function updatePlayer(dt){
   p.moving=dx!==0||dy!==0;
   if(p.moving){
     const l=Math.hypot(dx,dy)||1;dx/=l;dy/=l;
-    // Smoothly rotate aim toward walk direction
-    p.aimX=lerp(p.aimX,dx,10*dt);p.aimY=lerp(p.aimY,dy,10*dt);
-    const al=Math.hypot(p.aimX,p.aimY)||1;p.aimX/=al;p.aimY/=al;
     p.dir=dx<0?-1:dx>0?1:p.dir;
     p.walkCycle=(p.walkCycle+dt*8)%(Math.PI*2);
-  }else{
-    // When idle: slowly track nearest enemy
-    const t=nearestEnemy(p.x,p.y,600);
-    if(t){const d=Math.hypot(t.x-p.x,t.y-p.y)||1;
-      p.aimX=lerp(p.aimX,(t.x-p.x)/d,4*dt);p.aimY=lerp(p.aimY,(t.y-p.y)/d,4*dt);
-      p.dir=t.x>p.x?1:-1;}
   }
+  // Aimbot: always snap aim to nearest enemy instantly
+  {const t=nearestEnemy(p.x,p.y,99999);
+  if(t){const d=Math.hypot(t.x-p.x,t.y-p.y)||1;
+    p.aimX=(t.x-p.x)/d;p.aimY=(t.y-p.y)/d;
+    p.dir=t.x>p.x?1:-1;
+  }}
   p.vx=lerp(p.vx,dx*p.speed,12*dt);p.vy=lerp(p.vy,dy*p.speed,12*dt);
   p.x=clamp(p.x+p.vx*dt,20,WORLD-20);p.y=clamp(p.y+p.vy*dt,20,WORLD-20);
   if(p.invincible>0)p.invincible-=dt;
@@ -1117,9 +1114,9 @@ function drawMenu(t){
   // ← Back to site button (top-left)
   const bw=130,bh=26,bx=12,by=12;
   MENU_BTNS.push({x:bx,y:by,w:bw,h:bh,action:()=>window.location.href='index.html'});
-  ctx.fillStyle='rgba(6,3,0,0.8)';ctx.fillRect(bx,by,bw,bh);
-  ctx.strokeStyle='#3a2000';ctx.lineWidth=1;ctx.strokeRect(bx,by,bw,bh);
-  ctx.fillStyle='#5c4033';ctx.font='bold 10px monospace';ctx.textAlign='left';
+  ctx.fillStyle='rgba(20,10,0,0.85)';ctx.fillRect(bx,by,bw,bh);
+  ctx.strokeStyle='#cd853f';ctx.lineWidth=1;ctx.strokeRect(bx,by,bw,bh);
+  ctx.fillStyle='#daa520';ctx.font='bold 10px monospace';ctx.textAlign='left';
   ctx.fillText('← MAIN SITE',bx+10,by+17);
 
   // ── pump.fun / Solana footer ─────────────────────────────────────────────
