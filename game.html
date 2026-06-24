@@ -73,10 +73,6 @@ const GHOST_DEFS=[
   {name:'SolWarrior',  wallet:'Zw8L...6cXm',hairIdx:3,armorIdx:1,hue:'#f472b6'},
   {name:'DungeonMstr', wallet:'Hj5N...2kBv',hairIdx:0,armorIdx:3,hue:'#fb923c'},
 ];
-const GHOST_CHATS=['wave {w} letsgo!!','nice kill!','boss incoming??','getting rekt here',
-  'this pit is rough','hodl the line','need heals asap','PUMP to the moon',
-  'wave {w} cleared!!','lfg!!','gotta move faster','boss spawned omg','survive!!',
-  'someone help me','im almost dead lol','this wave is insane'];
 let GHOSTS=[];
 function mkGhost(d){
   return{...d,x:WORLD/2+rand(-400,400),y:WORLD/2+rand(-400,400),
@@ -84,9 +80,34 @@ function mkGhost(d){
     dir:1,aimX:1,aimY:0,walkCycle:Math.random()*Math.PI*2,
     score:randI(50,900),kills:randI(0,25),alive:true,
     respawnTimer:0,wanderAngle:Math.random()*Math.PI*2,wanderTimer:rand(1.5,4),
-    shootFlash:0,shootTimer:rand(0.3,2),dmgTimer:rand(4,10),
-    chatMsg:null,chatTimer:0,chatCooldown:rand(8,18)};
+    shootFlash:0,shootTimer:rand(0.3,2),dmgTimer:rand(4,10)};
 }
+
+// ── PLAYER CHAT ───────────────────────────────────────────────────────────────
+let CHAT={active:false,msg:null,timer:0};
+const chatWrap=document.getElementById('chat-wrap');
+const chatInput=document.getElementById('chat-input');
+function openChat(){
+  if(G.phase!=='playing')return;
+  CHAT.active=true;
+  chatWrap.style.display='flex';
+  chatInput.value='';
+  chatInput.focus();
+}
+function closeChat(send){
+  CHAT.active=false;
+  chatWrap.style.display='none';
+  if(send){
+    const txt=chatInput.value.trim().slice(0,48);
+    if(txt){CHAT.msg=txt;CHAT.timer=4.5;}
+  }
+  chatInput.blur();
+}
+chatInput.addEventListener('keydown',e=>{
+  e.stopPropagation();
+  if(e.key==='Enter'){e.preventDefault();closeChat(true);}
+  if(e.key==='Escape'){e.preventDefault();closeChat(false);}
+});
 function initGhosts(){GHOSTS=GHOST_DEFS.slice(0,2+randI(0,2)).map(mkGhost);}
 function updateGhosts(dt){
   const p=G.player;
@@ -116,11 +137,6 @@ function updateGhosts(dt){
     if(g.dmgTimer<=0&&G.enemies.length>0){g.dmgTimer=rand(4,10);
       g.hp=Math.max(0,g.hp-randI(5,18));
       if(g.hp<=0){g.alive=false;g.respawnTimer=rand(5,9);}}
-    g.chatCooldown-=dt;
-    if(g.chatCooldown<=0){g.chatCooldown=rand(10,25);
-      let msg=GHOST_CHATS[randI(0,GHOST_CHATS.length-1)];
-      g.chatMsg=msg.replace('{w}',G.waveNum);g.chatTimer=3.5;}
-    if(g.chatTimer>0)g.chatTimer-=dt;
   }
 }
 function drawGhosts(){
@@ -143,16 +159,6 @@ function drawGhosts(){
     ctx.fillStyle='#1a0a00';ctx.fillRect(bx2,by2,bw,bh);
     const hf=g.hp/g.maxHp;ctx.fillStyle=hf>.5?'#22c55e':hf>.25?'#f59e0b':'#ef4444';
     ctx.fillRect(bx2,by2,bw*hf,bh);
-    // Chat bubble
-    if(g.chatMsg&&g.chatTimer>0){
-      const a=Math.min(1,g.chatTimer);ctx.globalAlpha=a;
-      ctx.font='9px monospace';
-      const tw=Math.min(ctx.measureText(g.chatMsg).width+16,200);
-      const cbx=sx-tw/2,cby=sy-72;
-      ctx.fillStyle='rgba(10,5,2,0.92)';roundRect(cbx,cby,tw,17,3);ctx.fill();
-      ctx.strokeStyle=g.hue+'88';ctx.lineWidth=1;roundRect(cbx,cby,tw,17,3);ctx.stroke();
-      ctx.fillStyle='#fef3c7';ctx.fillText(g.chatMsg,sx,cby+12);
-      ctx.globalAlpha=1;}
     ctx.textAlign='left';
   }
 }
@@ -262,7 +268,7 @@ function snd(type){const ac=getAC();if(!ac)return;try{const g=ac.createGain();g.
 
 // ── INPUT ─────────────────────────────────────────────────────────────────────
 const keys={};
-window.addEventListener('keydown',e=>{keys[e.key]=true;keys[e.code]=true;});
+window.addEventListener('keydown',e=>{if(!CHAT.active){keys[e.key]=true;keys[e.code]=true;}});
 window.addEventListener('keyup',e=>{delete keys[e.key];delete keys[e.code];});
 let touch={active:false,startX:0,startY:0,dx:0,dy:0};
 c.addEventListener('touchstart',e=>{e.preventDefault();const t=e.touches[0];touch={active:true,startX:t.clientX,startY:t.clientY,dx:0,dy:0};},{passive:false});
@@ -779,6 +785,7 @@ function update(dt){
   G.particles=G.particles.filter(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vx*=.87;p.vy*=.87;p.life-=dt;return p.life>0;});
   if(G.particles.length>120)G.particles.splice(0,G.particles.length-120);
   updateSpawning(dt);updateCamera(dt);updateGhosts(dt);
+  if(CHAT.timer>0){CHAT.timer-=dt;if(CHAT.timer<=0)CHAT.msg=null;}
 }
 
 // ── DRAW HELPERS ──────────────────────────────────────────────────────────────
@@ -849,6 +856,17 @@ function drawPlayer(){
     ctx.beginPath();ctx.arc(ox,oy,4,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
     ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillText(w.icon,ox,oy+3);
     ctx.beginPath();ctx.arc(sx,sy,38,0,Math.PI*2);ctx.strokeStyle=w.color+'25';ctx.lineWidth=1;ctx.stroke();
+  }
+  // Player chat bubble
+  if(CHAT.msg&&CHAT.timer>0){
+    const a=Math.min(1,CHAT.timer);ctx.globalAlpha=a;ctx.textAlign='center';
+    ctx.font='bold 10px monospace';
+    const tw=Math.min(ctx.measureText(CHAT.msg).width+18,240);
+    const cbx=sx-tw/2,cby=sy-80;
+    ctx.fillStyle='rgba(10,5,2,0.92)';roundRect(cbx,cby,tw,18,4);ctx.fill();
+    ctx.strokeStyle='#cd853f';ctx.lineWidth=1;roundRect(cbx,cby,tw,18,4);ctx.stroke();
+    ctx.fillStyle='#fef3c7';ctx.fillText(CHAT.msg,sx,cby+13);
+    ctx.globalAlpha=1;
   }
   ctx.textAlign='left';
 }
@@ -1427,8 +1445,10 @@ function loop(ts){
 
 // ── EVENTS ────────────────────────────────────────────────────────────────────
 window.addEventListener('keydown',e=>{
+  if(CHAT.active)return; // chat input handles its own keys via stopPropagation
   if((e.key==='Enter'||e.key===' ')&&G.phase==='dead'){G.phase='menu';return;}
   if(e.key===' '&&G.phase==='playing'){e.preventDefault();activateUlti();return;}
+  if((e.key==='t'||e.key==='T')&&G.phase==='playing'){e.preventDefault();openChat();return;}
   if(G.phase==='levelup'&&e.key!=='Escape'){const i=parseInt(e.key)-1;if(i>=0&&i<G.upgradeChoices.length)applyUpgrade(G.upgradeChoices[i]);}
   if(e.key==='Escape'){
     if(G.phase==='playing'||G.phase==='levelup'){G.prevPhase=G.phase;G.phase='paused';G.pauseShowLB=false;return;}
@@ -1452,5 +1472,11 @@ initBG();
 tryAutoConnect();
 requestAnimationFrame(loop);
 </script>
+<div id="chat-wrap" style="display:none;position:fixed;bottom:86px;left:50%;transform:translateX(-50%);z-index:300;align-items:center;gap:10px;background:rgba(10,5,2,0.93);border:1px solid #cd853f;padding:7px 14px;font-family:'Courier New',monospace;">
+  <span style="color:#cd853f;font-size:10px;letter-spacing:2px;">SAY:</span>
+  <input id="chat-input" type="text" maxlength="48" autocomplete="off" spellcheck="false"
+    style="background:transparent;border:none;outline:none;color:#fef3c7;font-size:12px;font-family:'Courier New',monospace;width:280px;caret-color:#cd853f;">
+  <span style="color:#5c4033;font-size:9px;letter-spacing:1px;">[ENTER]</span>
+</div>
 </body>
 </html>
