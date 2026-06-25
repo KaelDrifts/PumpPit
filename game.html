@@ -85,28 +85,27 @@ function mkGhost(d){
 
 // ── PLAYER CHAT ───────────────────────────────────────────────────────────────
 let CHAT={active:false,msg:null,timer:0};
-const chatWrap=document.getElementById('chat-wrap');
-const chatInput=document.getElementById('chat-input');
 function openChat(){
   if(G.phase!=='playing')return;
-  CHAT.active=true;
-  chatWrap.style.display='flex';
-  chatInput.value='';
-  chatInput.focus();
+  const cw=document.getElementById('chat-wrap'),ci=document.getElementById('chat-input');
+  if(!cw||!ci)return;
+  CHAT.active=true;cw.style.display='flex';ci.value='';ci.focus();
 }
 function closeChat(send){
-  CHAT.active=false;
-  chatWrap.style.display='none';
-  if(send){
-    const txt=chatInput.value.trim().slice(0,48);
-    if(txt){CHAT.msg=txt;CHAT.timer=4.5;}
-  }
-  chatInput.blur();
+  const cw=document.getElementById('chat-wrap'),ci=document.getElementById('chat-input');
+  CHAT.active=false;if(cw)cw.style.display='none';
+  if(send&&ci){const txt=ci.value.trim().slice(0,48);if(txt){CHAT.msg=txt;CHAT.timer=4.5;}}
+  if(ci)ci.blur();
 }
-chatInput.addEventListener('keydown',e=>{
-  e.stopPropagation();
-  if(e.key==='Enter'){e.preventDefault();closeChat(true);}
-  if(e.key==='Escape'){e.preventDefault();closeChat(false);}
+// Set up chat input listener after the DOM element exists
+window.addEventListener('load',function(){
+  const ci=document.getElementById('chat-input');
+  if(!ci)return;
+  ci.addEventListener('keydown',function(e){
+    e.stopPropagation();
+    if(e.key==='Enter'){e.preventDefault();closeChat(true);}
+    if(e.key==='Escape'){e.preventDefault();closeChat(false);}
+  });
 });
 function initGhosts(){GHOSTS=GHOST_DEFS.slice(0,2+randI(0,2)).map(mkGhost);}
 function updateGhosts(dt){
@@ -854,7 +853,7 @@ function drawPlayer(){
     const pulse=.6+Math.sin(G.time*4+i)*.4;
     ctx.beginPath();ctx.arc(ox,oy,7,0,Math.PI*2);ctx.fillStyle=w.color+(Math.floor(pulse*220).toString(16).padStart(2,'0'));ctx.fill();
     ctx.beginPath();ctx.arc(ox,oy,4,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();
-    ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillText(w.icon,ox,oy+3);
+    ctx.save();ctx.scale(0.55,0.55);drawGameIcon(w.id,Math.round(ox/0.55),Math.round(oy/0.55),w.color);ctx.restore();
     ctx.beginPath();ctx.arc(sx,sy,38,0,Math.PI*2);ctx.strokeStyle=w.color+'25';ctx.lineWidth=1;ctx.stroke();
   }
   // Player chat bubble
@@ -986,6 +985,141 @@ function draw(){
   if(G.bossAnnounce>0){ctx.globalAlpha=Math.min(1,G.bossAnnounce);ctx.textAlign='center';ctx.fillStyle='rgba(20,8,0,.85)';ctx.fillRect(W/2-220,H/2-36,440,70);ctx.strokeStyle='#8b4513';ctx.lineWidth=2;ctx.strokeRect(W/2-220,H/2-36,440,70);ctx.shadowBlur=20;ctx.shadowColor='#f97316';pxText('BOSS APPROACHING!',W/2,H/2-10,22,'#f97316','center');ctx.shadowBlur=10;ctx.shadowColor='#daa520';pxText(G.bossName.toUpperCase(),W/2,H/2+20,16,'#daa520','center');ctx.shadowBlur=0;ctx.globalAlpha=1;ctx.textAlign='left';}
   if(G.waveAnnounce>0){const a2=Math.min(1,G.waveAnnounce);ctx.globalAlpha=a2;ctx.textAlign='center';ctx.fillStyle='rgba(8,4,0,.8)';ctx.fillRect(W/2-180,H/2-28,360,52);ctx.strokeStyle='#daa520';ctx.lineWidth=1;ctx.strokeRect(W/2-180,H/2-28,360,52);ctx.shadowBlur=16;ctx.shadowColor='#daa520';pxText('WAVE '+G.waveNum,W/2,H/2,20,'#daa520','center');ctx.shadowBlur=0;ctx.globalAlpha=1;ctx.textAlign='left';}
 }
+// ── PIXEL ART WEAPON / PASSIVE ICONS ─────────────────────────────────────────
+function drawGameIcon(id,cx,cy,col){
+  const p=2,D='#111827',L='#d1d5db',W='#f9fafb';
+  ctx.save();ctx.translate(Math.floor(cx),Math.floor(cy));
+  switch(id){
+    case'pistol':
+      ctx.fillStyle=L;ctx.fillRect(-6*p,-3*p,9*p,2*p);       // barrel
+      ctx.fillStyle=col;ctx.fillRect(-5*p,-p,7*p,3*p);        // body
+      ctx.fillStyle=D;ctx.fillRect(3*p,-4*p,p,2*p);           // front sight
+      ctx.fillStyle=D;ctx.fillRect(-p,p,p,2*p);               // trigger
+      ctx.fillStyle=col;ctx.fillRect(-2*p,2*p,3*p,4*p);       // grip
+      ctx.fillStyle=D;ctx.fillRect(-2*p,6*p,3*p,p);           // grip base
+      break;
+    case'machinegun':
+      ctx.fillStyle=L;ctx.fillRect(-8*p,-3*p,14*p,2*p);       // long barrel
+      ctx.fillStyle=col;ctx.fillRect(-6*p,-p,11*p,3*p);       // body
+      ctx.fillStyle=D;ctx.fillRect(-4*p,-p,p,p);ctx.fillRect(-p,-p,p,p);ctx.fillRect(2*p,-p,p,p); // vents
+      ctx.fillStyle=D;ctx.fillRect(4*p,-p,3*p,5*p);           // drum mag
+      ctx.fillStyle=col;ctx.fillRect(4*p,0,2*p,3*p);          // drum highlight
+      ctx.fillStyle=col;ctx.fillRect(-p,2*p,3*p,5*p);         // grip
+      break;
+    case'shotgun':
+      ctx.fillStyle=L;ctx.fillRect(-7*p,-4*p,9*p,2*p);        // top barrel
+      ctx.fillStyle=D;ctx.fillRect(-7*p,-2*p,9*p,p);          // gap between barrels
+      ctx.fillStyle=L;ctx.fillRect(-7*p,-p,9*p,2*p);          // bot barrel
+      ctx.fillStyle=col;ctx.fillRect(-4*p,p,11*p,3*p);        // body
+      ctx.fillStyle='#7c4a2a';ctx.fillRect(2*p,-2*p,8*p,5*p); // wood stock
+      ctx.fillStyle='#a0623a';ctx.fillRect(3*p,-p,6*p,2*p);   // stock highlight
+      break;
+    case'laser':
+      ctx.fillStyle=D;ctx.fillRect(-6*p,-3*p,6*p,6*p);        // emitter housing
+      ctx.fillStyle=col;ctx.fillRect(-5*p,-2*p,4*p,4*p);      // emitter core
+      ctx.fillStyle=D;ctx.fillRect(-3*p,-4*p,3*p,2*p);        // scope
+      ctx.fillStyle=col+'cc';ctx.fillRect(0,-p,9*p,2*p);      // beam body
+      ctx.fillStyle=col+'44';ctx.fillRect(0,-2*p,9*p,p);      // beam glow top
+      ctx.fillStyle=col+'44';ctx.fillRect(0,p,9*p,p);         // beam glow bot
+      ctx.fillStyle=W;ctx.fillRect(7*p,-p,3*p,2*p);           // beam tip
+      break;
+    case'grenade':
+      ctx.fillStyle=col;
+      ctx.fillRect(-p,-5*p,2*p,p);ctx.fillRect(-3*p,-4*p,6*p,7*p);
+      ctx.fillRect(-2*p,-4*p,4*p,8*p);ctx.fillRect(-p,3*p,2*p,p);
+      ctx.fillStyle=D;ctx.fillRect(-3*p,-p,6*p,p);            // band
+      ctx.fillStyle=L;ctx.fillRect(-2*p,-3*p,p,2*p);          // highlight
+      ctx.fillStyle='#9ca3af';ctx.fillRect(-p,-6*p,p,2*p);    // pin shaft
+      ctx.fillStyle='#9ca3af';ctx.fillRect(-2*p,-7*p,4*p,p);  // pin ring
+      break;
+    case'homing':
+      ctx.fillStyle=col;ctx.fillRect(-8*p,-p,11*p,2*p);       // body
+      ctx.fillStyle=L;ctx.fillRect(2*p,-p,2*p,2*p);           // nose
+      ctx.fillStyle=W;ctx.fillRect(4*p,-p,p,2*p);             // tip
+      ctx.fillStyle=col;ctx.fillRect(-8*p,-3*p,4*p,2*p);      // top fin
+      ctx.fillStyle=col;ctx.fillRect(-8*p,p,4*p,2*p);         // bot fin
+      ctx.fillStyle='#f97316';ctx.fillRect(-10*p,-p,3*p,2*p); // exhaust
+      ctx.fillStyle='#fbbf24';ctx.fillRect(-9*p,0,2*p,p);     // exhaust core
+      break;
+    case'freeze':
+      ctx.fillStyle=col;
+      ctx.fillRect(-5*p,-p,10*p,2*p);                          // horizontal
+      ctx.fillRect(-p,-5*p,2*p,10*p);                          // vertical
+      ctx.fillRect(-4*p,-4*p,2*p,2*p);ctx.fillRect(2*p,-4*p,2*p,2*p); // diag arms
+      ctx.fillRect(-4*p,2*p,2*p,2*p);ctx.fillRect(2*p,2*p,2*p,2*p);
+      ctx.fillStyle=L;
+      ctx.fillRect(-5*p,0,p,p);ctx.fillRect(4*p,0,p,p);       // side tips
+      ctx.fillRect(0,-5*p,p,p);ctx.fillRect(0,4*p,p,p);       // top/bot tips
+      break;
+    case'flamethrower':
+      ctx.fillStyle=col;ctx.fillRect(-8*p,-3*p,6*p,6*p);      // tank
+      ctx.fillStyle=L;ctx.fillRect(-7*p,-2*p,4*p,p);          // tank highlight
+      ctx.fillStyle=D;ctx.fillRect(-7*p,p,4*p,p);             // tank vent
+      ctx.fillStyle=D;ctx.fillRect(-2*p,-p,p,3*p);            // hose
+      ctx.fillStyle='#374151';ctx.fillRect(-p,-p,6*p,2*p);    // nozzle
+      ctx.fillStyle='#ef4444';ctx.fillRect(5*p,-3*p,3*p,p);
+      ctx.fillStyle='#f97316';ctx.fillRect(5*p,-2*p,4*p,2*p);
+      ctx.fillStyle='#fbbf24';ctx.fillRect(5*p,0,3*p,2*p);
+      ctx.fillStyle='#ef4444';ctx.fillRect(5*p,2*p,3*p,p);
+      ctx.fillStyle=W;ctx.fillRect(7*p,-p,2*p,2*p);            // flame core
+      break;
+    case'shield':
+      ctx.fillStyle=col;
+      ctx.fillRect(-5*p,-6*p,10*p,8*p);                       // upper body
+      ctx.fillRect(-4*p,2*p,8*p,3*p);                         // lower taper
+      ctx.fillRect(-3*p,5*p,6*p,2*p);
+      ctx.fillRect(-p,7*p,2*p,p);                              // tip
+      ctx.fillStyle=L;ctx.fillRect(-4*p,-5*p,p,6*p);          // left highlight
+      ctx.fillStyle=D;ctx.fillRect(-5*p,-6*p,10*p,p);         // top edge
+      break;
+    case'armor':
+      ctx.fillStyle=col;
+      ctx.fillRect(-6*p,-6*p,4*p,3*p);ctx.fillRect(2*p,-6*p,4*p,3*p); // pauldrons
+      ctx.fillRect(-5*p,-3*p,10*p,7*p);                       // chest
+      ctx.fillRect(-4*p,4*p,8*p,3*p);                         // waist
+      ctx.fillStyle=L;ctx.fillRect(-4*p,-2*p,p,5*p);          // highlight
+      ctx.fillStyle=D;ctx.fillRect(-p,-3*p,2*p,2*p);          // collar
+      ctx.fillStyle=D;ctx.fillRect(-p,p,2*p,p);               // center line
+      break;
+    case'magnet':
+      ctx.fillStyle=col;
+      ctx.fillRect(-5*p,-5*p,3*p,9*p);                        // left arm
+      ctx.fillRect(2*p,-5*p,3*p,9*p);                         // right arm
+      ctx.fillRect(-5*p,4*p,10*p,3*p);                        // bottom bar
+      ctx.fillStyle='#ef4444';ctx.fillRect(-5*p,-5*p,3*p,3*p);// N pole red
+      ctx.fillStyle='#38bdf8';ctx.fillRect(2*p,-5*p,3*p,3*p); // S pole blue
+      ctx.fillStyle=L;ctx.fillRect(-4*p,0,p,4*p);             // left shine
+      break;
+    case'speed':
+      ctx.fillStyle=col;
+      ctx.fillRect(2*p,-7*p,4*p,5*p);                         // top seg
+      ctx.fillRect(-5*p,-2*p,9*p,3*p);                        // middle slash
+      ctx.fillRect(-5*p,p,4*p,5*p);                           // bottom seg
+      ctx.fillStyle=L;ctx.fillRect(3*p,-6*p,2*p,4*p);         // top highlight
+      ctx.fillStyle=L;ctx.fillRect(-4*p,2*p,2*p,4*p);         // bot highlight
+      break;
+    case'health':
+      ctx.fillStyle=col;
+      ctx.fillRect(-p,-7*p,2*p,14*p);                         // vertical
+      ctx.fillRect(-7*p,-p,14*p,2*p);                         // horizontal
+      ctx.fillStyle=L;ctx.fillRect(-p,-6*p,p,6*p);            // vertical highlight
+      ctx.fillStyle=L;ctx.fillRect(-6*p,-p,6*p,p);            // horizontal highlight
+      break;
+    case'crit':
+      ctx.fillStyle=col;
+      ctx.fillRect(-p,-7*p,2*p,4*p);ctx.fillRect(-p,3*p,2*p,4*p);   // top/bot points
+      ctx.fillRect(-7*p,-p,4*p,2*p);ctx.fillRect(3*p,-p,4*p,2*p);   // left/right points
+      ctx.fillRect(-3*p,-3*p,6*p,6*p);                               // center
+      ctx.fillStyle=L;ctx.fillRect(-p,-6*p,p,3*p);ctx.fillRect(-6*p,-p,3*p,p);
+      ctx.fillStyle=W;ctx.fillRect(-p,-p,p,p);                       // sparkle
+      break;
+    default:
+      ctx.fillStyle=col;ctx.fillRect(-5*p,-5*p,10*p,10*p);
+      ctx.fillStyle=L;ctx.fillRect(-4*p,-4*p,3*p,3*p);
+  }
+  ctx.restore();
+}
+
 function drawHUD(){
   const p=G.player;
   // Low-HP vignette — red pulse on screen border
@@ -1057,7 +1191,7 @@ function drawHUD(){
     ctx.fillStyle='rgba(12,6,0,0.82)';ctx.fillRect(bx,by,slotW,slotH);
     ctx.strokeStyle=i===0?'#cd853f':w.color;ctx.lineWidth=1;ctx.strokeRect(bx,by,slotW,slotH);
     // Icon
-    ctx.font='20px sans-serif';ctx.textAlign='center';ctx.fillText(w.icon,bx+slotW/2,by+26);
+    drawGameIcon(w.id,bx+slotW/2,by+22,w.color);
     // Name
     ctx.fillStyle='#cd853f';ctx.font='7px monospace';ctx.fillText(w.name.slice(0,8),bx+slotW/2,by+38);
     // Upgrade level dots
@@ -1083,7 +1217,9 @@ function drawLevelUp(){
   const chs=G.upgradeChoices,cw2=Math.min(190,(W-60)/chs.length),tot=chs.length*(cw2+14)-14,sx2=W/2-tot/2;
   for(let i=0;i<chs.length;i++){const ch=chs[i],cx=sx2+i*(cw2+14),cy=H/2-90;
     ctx.fillStyle='rgba(25,10,0,.9)';roundRect(cx,cy,cw2,180,8);ctx.fill();ctx.strokeStyle='#5c4033';ctx.lineWidth=2;roundRect(cx,cy,cw2,180,8);ctx.stroke();ctx.strokeStyle=ch.color+'88';ctx.lineWidth=1;roundRect(cx+3,cy+3,cw2-6,174,6);ctx.stroke();
-    ctx.font='32px sans-serif';ctx.textAlign='center';ctx.fillText(ch.icon,cx+cw2/2,cy+46);ctx.fillStyle=ch.color;ctx.font='bold 11px monospace';ctx.fillText(ch.desc,cx+cw2/2,cy+64);ctx.fillStyle='#fef3c7';ctx.font='bold 12px monospace';wrapDraw(ch.name,cx+cw2/2,cy+86,cw2-14);ctx.fillStyle='#daa520';ctx.font='bold 13px monospace';ctx.fillText('['+( i+1)+']',cx+cw2/2,cy+164);}
+    const _iid=ch.type==='pass'?ch.pid:ch.type==='wup'?ch.w.id:ch.wid;
+    drawGameIcon(_iid,cx+cw2/2,cy+40,ch.color);
+    ctx.fillStyle=ch.color;ctx.font='bold 11px monospace';ctx.fillText(ch.desc,cx+cw2/2,cy+64);ctx.fillStyle='#fef3c7';ctx.font='bold 12px monospace';wrapDraw(ch.name,cx+cw2/2,cy+86,cw2-14);ctx.fillStyle='#daa520';ctx.font='bold 13px monospace';ctx.fillText('['+( i+1)+']',cx+cw2/2,cy+164);}
   ctx.textAlign='left';
 }
 

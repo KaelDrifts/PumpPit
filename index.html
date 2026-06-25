@@ -232,7 +232,8 @@
     }
     .pu-card:hover { transform: translateY(-4px); background: rgba(40,20,0,.7); }
     .pu-card:hover { border-color: var(--card-glow, var(--gold)); }
-    .pu-emoji { font-size: 28px; display: block; margin-bottom: 10px; }
+    .pu-emoji { display: block; margin-bottom: 10px; line-height: 1; }
+    .pu-emoji svg { display: block; margin: 0 auto; image-rendering: pixelated; }
     .pu-name { font-family: 'Press Start 2P', monospace; font-size: 7px; margin-bottom: 8px; }
     .pu-desc { font-size: 10px; color: #666; line-height: 1.7; }
     .pu-tag  { display:inline-block; font-size:8px; padding:2px 7px; margin-bottom:8px;
@@ -393,42 +394,42 @@
   <p class="pu-label">— WEAPONS —</p>
   <div class="pu-grid">
     <div class="pu-card" style="--card-glow:#f59e0b">
-      <span class="pu-emoji">🔫</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="13" width="26" height="4" fill="#9ca3af"/><rect x="4" y="17" width="22" height="6" fill="#f59e0b"/><rect x="26" y="9" width="4" height="8" fill="#374151"/><rect x="4" y="21" width="16" height="2" fill="#b45309"/><rect x="10" y="21" width="4" height="6" fill="#374151"/><rect x="14" y="23" width="8" height="10" fill="#f59e0b"/><rect x="14" y="33" width="8" height="4" fill="#b45309"/></svg></span>
       <div class="pu-name" style="color:#f59e0b">PISTOL</div>
       <p class="pu-desc">High-speed single shots. Your starting weapon. 3 upgrade tiers.</p>
     </div>
     <div class="pu-card" style="--card-glow:#ef4444">
-      <span class="pu-emoji">⚙️</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="12" width="36" height="4" fill="#9ca3af"/><rect x="4" y="16" width="26" height="6" fill="#ef4444"/><rect x="6" y="16" width="3" height="3" fill="#7f1d1d"/><rect x="13" y="16" width="3" height="3" fill="#7f1d1d"/><rect x="20" y="16" width="3" height="3" fill="#7f1d1d"/><rect x="26" y="16" width="8" height="12" fill="#991b1b"/><rect x="28" y="18" width="5" height="7" fill="#ef4444"/><rect x="10" y="22" width="8" height="10" fill="#ef4444"/></svg></span>
       <div class="pu-name" style="color:#ef4444">MACHINE GUN</div>
       <p class="pu-desc">9 rounds per second. Melts hordes. Unlocks spread shot upgrade.</p>
     </div>
     <div class="pu-card" style="--card-glow:#f97316">
-      <span class="pu-emoji">💥</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="10" width="26" height="5" fill="#d1d5db"/><rect x="2" y="16" width="26" height="3" fill="#374151"/><rect x="2" y="19" width="26" height="5" fill="#9ca3af"/><rect x="8" y="23" width="28" height="8" fill="#f97316"/><rect x="22" y="15" width="14" height="12" fill="#7c4a2a"/><rect x="24" y="17" width="10" height="7" fill="#a0623a"/><rect x="10" y="31" width="10" height="8" fill="#f97316"/></svg></span>
       <div class="pu-name" style="color:#f97316">SHOTGUN</div>
       <p class="pu-desc">5-pellet burst. Devastating at close range. Upgrades to 7 pellets.</p>
     </div>
     <div class="pu-card" style="--card-glow:#a78bfa">
-      <span class="pu-emoji">🔆</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="14" width="16" height="12" fill="#1f2937"/><rect x="2" y="16" width="12" height="8" fill="#a78bfa"/><rect x="4" y="8" width="8" height="8" fill="#1f2937"/><rect x="6" y="10" width="4" height="4" fill="#c4b5fd"/><rect x="16" y="18" width="22" height="4" fill="#a78bfa"/><rect x="16" y="15" width="22" height="3" fill="#a78bfa55"/><rect x="16" y="22" width="22" height="3" fill="#a78bfa55"/><rect x="34" y="17" width="6" height="6" fill="#f9fafb"/></svg></span>
       <div class="pu-name" style="color:#a78bfa">LASER</div>
       <p class="pu-desc">Instant hit beam. No travel time. Pierces multiple enemies.</p>
     </div>
     <div class="pu-card" style="--card-glow:#84cc16">
-      <span class="pu-emoji">💣</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="16" y="2" width="4" height="6" fill="#9ca3af"/><rect x="14" y="0" width="8" height="4" fill="#9ca3af"/><rect x="14" y="8" width="12" height="4" fill="#84cc16"/><rect x="10" y="10" width="20" height="18" fill="#84cc16"/><rect x="8" y="12" width="24" height="14" fill="#84cc16"/><rect x="10" y="26" width="20" height="6" fill="#84cc16"/><rect x="14" y="30" width="12" height="4" fill="#84cc16"/><rect x="8" y="18" width="24" height="4" fill="#4d7c0f"/><rect x="12" y="12" width="6" height="6" fill="#a3e635"/></svg></span>
       <div class="pu-name" style="color:#84cc16">GRENADE</div>
       <p class="pu-desc">Explosive AOE. Massive blast radius. Clears tight clusters instantly.</p>
     </div>
     <div class="pu-card" style="--card-glow:#06b6d4">
-      <span class="pu-emoji">🚀</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="17" width="28" height="6" fill="#06b6d4"/><rect x="28" y="15" width="6" height="10" fill="#d1d5db"/><rect x="34" y="17" width="4" height="6" fill="#f9fafb"/><rect x="4" y="11" width="10" height="6" fill="#06b6d4"/><rect x="4" y="23" width="10" height="6" fill="#06b6d4"/><rect x="0" y="17" width="6" height="6" fill="#f97316"/><rect x="2" y="19" width="4" height="4" fill="#fbbf24"/><rect x="0" y="20" width="2" height="2" fill="#f9fafb"/></svg></span>
       <div class="pu-name" style="color:#06b6d4">MISSILES</div>
       <p class="pu-desc">Homing projectiles. Lock onto enemies mid-flight. Upgrades to 3 at once.</p>
     </div>
     <div class="pu-card" style="--card-glow:#7dd3fc">
-      <span class="pu-emoji">❄️</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="18" y="2" width="4" height="36" fill="#7dd3fc"/><rect x="2" y="18" width="36" height="4" fill="#7dd3fc"/><rect x="6" y="6" width="6" height="6" fill="#7dd3fc"/><rect x="28" y="6" width="6" height="6" fill="#7dd3fc"/><rect x="6" y="28" width="6" height="6" fill="#7dd3fc"/><rect x="28" y="28" width="6" height="6" fill="#7dd3fc"/><rect x="2" y="18" width="4" height="4" fill="#f9fafb"/><rect x="34" y="18" width="4" height="4" fill="#f9fafb"/><rect x="18" y="2" width="4" height="4" fill="#f9fafb"/><rect x="18" y="34" width="4" height="4" fill="#f9fafb"/></svg></span>
       <div class="pu-name" style="color:#7dd3fc">FREEZE</div>
       <p class="pu-desc">Radial ice burst. Freezes all enemies nearby. Shatter upgrade one-shots frozen foes.</p>
     </div>
     <div class="pu-card" style="--card-glow:#fb923c">
-      <span class="pu-emoji">🔥</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="0" y="12" width="18" height="18" fill="#fb923c"/><rect x="2" y="14" width="12" height="6" fill="#fed7aa"/><rect x="2" y="24" width="12" height="4" fill="#7c2d12"/><rect x="16" y="20" width="4" height="8" fill="#374151"/><rect x="18" y="18" width="18" height="8" fill="#4b5563"/><rect x="32" y="10" width="6" height="6" fill="#ef4444"/><rect x="30" y="14" width="8" height="6" fill="#f97316"/><rect x="32" y="20" width="6" height="6" fill="#fbbf24"/><rect x="30" y="26" width="8" height="4" fill="#ef4444"/><rect x="34" y="16" width="4" height="10" fill="#f9fafb"/></svg></span>
       <div class="pu-name" style="color:#fb923c">FLAMETHROWER</div>
       <p class="pu-desc">Continuous fire cone. Burn DOT. 16 hits per second at max rate.</p>
     </div>
@@ -437,37 +438,37 @@
   <p class="pu-label">— PASSIVES —</p>
   <div class="pu-grid">
     <div class="pu-card" style="--card-glow:#38bdf8">
-      <span class="pu-emoji">🛡️</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="2" width="32" height="20" fill="#38bdf8"/><rect x="6" y="22" width="28" height="8" fill="#38bdf8"/><rect x="10" y="30" width="20" height="6" fill="#38bdf8"/><rect x="16" y="36" width="8" height="4" fill="#38bdf8"/><rect x="4" y="2" width="32" height="4" fill="#1f2937"/><rect x="6" y="4" width="4" height="16" fill="#bae6fd"/></svg></span>
       <div class="pu-name" style="color:#38bdf8">SHIELD</div>
       <p class="pu-desc">Absorb one hit per charge. Regens over time. Stack up to 3.</p>
     </div>
     <div class="pu-card" style="--card-glow:#cd853f">
-      <span class="pu-emoji">🥋</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="12" height="10" fill="#cd853f"/><rect x="26" y="2" width="12" height="10" fill="#cd853f"/><rect x="6" y="10" width="28" height="18" fill="#cd853f"/><rect x="8" y="28" width="24" height="10" fill="#cd853f"/><rect x="8" y="14" width="4" height="12" fill="#e5c99e"/><rect x="16" y="10" width="8" height="6" fill="#1f2937"/><rect x="16" y="18" width="8" height="4" fill="#1f2937"/></svg></span>
       <div class="pu-name" style="color:#cd853f">ARMOR</div>
       <p class="pu-desc">Flat damage reduction on every hit. Up to 50% DR at max level.</p>
     </div>
     <div class="pu-card" style="--card-glow:#f472b6">
-      <span class="pu-emoji">🧲</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="12" height="24" fill="#f472b6"/><rect x="24" y="4" width="12" height="24" fill="#f472b6"/><rect x="4" y="28" width="32" height="8" fill="#f472b6"/><rect x="4" y="4" width="12" height="8" fill="#ef4444"/><rect x="24" y="4" width="12" height="8" fill="#38bdf8"/><rect x="6" y="16" width="4" height="12" fill="#fce7f3"/></svg></span>
       <div class="pu-name" style="color:#f472b6">MAGNET</div>
       <p class="pu-desc">Pulls XP orbs from farther away at higher speed. Never miss XP again.</p>
     </div>
     <div class="pu-card" style="--card-glow:#4ade80">
-      <span class="pu-emoji">👟</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="22" y="2" width="12" height="16" fill="#4ade80"/><rect x="10" y="10" width="22" height="10" fill="#4ade80"/><rect x="2" y="18" width="28" height="10" fill="#4ade80"/><rect x="2" y="28" width="28" height="8" fill="#4ade80"/><rect x="24" y="4" width="6" height="12" fill="#86efac"/><rect x="12" y="12" width="10" height="6" fill="#86efac"/></svg></span>
       <div class="pu-name" style="color:#4ade80">SPEED</div>
       <p class="pu-desc">Raw movement boost. Up to 2× at max. Kite enemies effortlessly.</p>
     </div>
     <div class="pu-card" style="--card-glow:#f87171">
-      <span class="pu-emoji">❤️</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="16" y="2" width="8" height="36" fill="#f87171"/><rect x="2" y="16" width="36" height="8" fill="#f87171"/><rect x="16" y="2" width="4" height="18" fill="#fca5a5"/><rect x="2" y="16" width="18" height="4" fill="#fca5a5"/></svg></span>
       <div class="pu-name" style="color:#f87171">HEALTH</div>
       <p class="pu-desc">Raise your max HP pool. Stack it twice for +150 HP total.</p>
     </div>
     <div class="pu-card" style="--card-glow:#fbbf24">
-      <span class="pu-emoji">⚡</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="20" y="2" width="14" height="18" fill="#fbbf24"/><rect x="8" y="14" width="24" height="10" fill="#fbbf24"/><rect x="8" y="20" width="14" height="18" fill="#fbbf24"/><rect x="22" y="4" width="8" height="14" fill="#fde68a"/><rect x="10" y="16" width="12" height="6" fill="#fde68a"/></svg></span>
       <div class="pu-name" style="color:#fbbf24">CRIT</div>
       <p class="pu-desc">Chance to deal 3× damage. Up to 60% crit rate at max tier.</p>
     </div>
     <div class="pu-card" style="--card-glow:#e879f9; grid-column: span 2">
-      <span class="pu-emoji">🌐</span>
+      <span class="pu-emoji"><svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><rect x="16" y="2" width="8" height="36" fill="#a78bfa"/><rect x="2" y="16" width="36" height="8" fill="#a78bfa"/><rect x="8" y="6" width="8" height="8" fill="#a78bfa"/><rect x="24" y="6" width="8" height="8" fill="#a78bfa"/><rect x="8" y="26" width="8" height="8" fill="#a78bfa"/><rect x="24" y="26" width="8" height="8" fill="#a78bfa"/><rect x="4" y="10" width="8" height="20" fill="#a78bfa"/><rect x="28" y="10" width="8" height="20" fill="#a78bfa"/><rect x="16" y="4" width="4" height="12" fill="#c4b5fd"/><rect x="4" y="16" width="12" height="4" fill="#c4b5fd"/></svg></span>
       <div class="pu-name" style="color:#e879f9">DOMAIN EXPANSION</div>
       <p class="pu-desc">Press <b style="color:#e879f9">SPACE</b> to unleash a shockwave that blasts every enemy outward. 20s cooldown. Zero survivors in range.</p>
     </div>
